@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset='utf-8' />
+<link href='fullcalendar.css' rel='stylesheet' />
+<link href='fullcalendar.print.css' rel='stylesheet' media='print' />
+<script src='lib/moment.min.js'></script>
+<script src='lib/jquery.min.js'></script>
+<script src='fullcalendar.min.js'></script>
+<script src='gcal.js'></script>
+
+<link href='capa.css' rel='stylesheet' />
+<script src='capa.js'></script>
+</head>
+
+<body>
+	<div id='loading'>loading...</div>
+	<div id='calendar'></div>
+    <!-- Assistent -->
+    <div id='calendarobject' class="calendarobject" style="display: none;">
+        <div id='calendar_title_root' class="calendar_title_root">
+            <div class="calendar_title"><input id="calendar_titles"></div>
+        </div>
+
+        <div id='calendar_times_root' class="calendar_times_root">
+            <div class="time_range" style="">From:
+                <select class="time_selects begin_time">
+                    <option value="0">00:00</option><option value="5">00:05</option><option value="10">00:10</option><option value="15">00:15</option><option value="20">00:20</option><option value="25">00:25</option><option value="30">00:30</option><option value="35">00:35</option><option value="40">00:40</option><option value="45">00:45</option><option value="50">00:50</option><option value="55">00:55</option><option value="60">01:00</option><option value="65">01:05</option><option value="70">01:10</option><option value="75">01:15</option><option value="80">01:20</option><option value="85">01:25</option><option value="90">01:30</option><option value="95">01:35</option><option value="100">01:40</option><option value="105">01:45</option><option value="110">01:50</option><option value="115">01:55</option><option value="120">02:00</option><option value="125">02:05</option><option value="130">02:10</option><option value="135">02:15</option><option value="140">02:20</option><option value="145">02:25</option><option value="150">02:30</option><option value="155">02:35</option><option value="160">02:40</option><option value="165">02:45</option><option value="170">02:50</option><option value="175">02:55</option><option value="180">03:00</option><option value="185">03:05</option><option value="190">03:10</option><option value="195">03:15</option><option value="200">03:20</option><option value="205">03:25</option><option value="210">03:30</option><option value="215">03:35</option><option value="220">03:40</option><option value="225">03:45</option><option value="230">03:50</option><option value="235">03:55</option><option value="240">04:00</option><option value="245">04:05</option><option value="250">04:10</option><option value="255">04:15</option><option value="260">04:20</option><option value="265">04:25</option><option value="270">04:30</option><option value="275">04:35</option><option value="280">04:40</option><option value="285">04:45</option><option value="290">04:50</option><option value="295">04:55</option><option value="300">05:00</option><option value="305">05:05</option><option value="310">05:10</option><option value="315">05:15</option><option value="320">05:20</option><option value="325">05:25</option><option value="330">05:30</option><option value="335">05:35</option><option value="340">05:40</option><option value="345">05:45</option><option value="350">05:50</option><option value="355">05:55</option><option value="360">06:00</option><option value="365">06:05</option><option value="370">06:10</option><option value="375">06:15</option><option value="380">06:20</option><option value="385">06:25</option><option value="390">06:30</option><option value="395">06:35</option><option value="400">06:40</option><option value="405">06:45</option><option value="410">06:50</option><option value="415">06:55</option><option value="420">07:00</option><option value="425">07:05</option><option value="430">07:10</option><option value="435">07:15</option><option value="440">07:20</option><option value="445">07:25</option><option value="450">07:30</option><option value="455">07:35</option><option value="460">07:40</option><option value="465">07:45</option><option value="470">07:50</option><option value="475">07:55</option><option value="480">08:00</option><option value="485">08:05</option><option value="490">08:10</option><option value="495">08:15</option><option value="500">08:20</option><option value="505">08:25</option><option value="510">08:30</option><option value="515">08:35</option><option value="520">08:40</option><option value="525">08:45</option><option value="530">08:50</option><option value="535">08:55</option><option value="540">09:00</option><option value="545">09:05</option><option value="550">09:10</option><option value="555">09:15</option><option value="560">09:20</option><option value="565">09:25</option><option value="570">09:30</option><option value="575">09:35</option><option value="580">09:40</option><option value="585">09:45</option><option value="590">09:50</option><option value="595">09:55</option><option value="600">10:00</option><option value="605">10:05</option><option value="610">10:10</option><option value="615">10:15</option><option value="620">10:20</option><option value="625">10:25</option><option value="630">10:30</option><option value="635">10:35</option><option value="640">10:40</option><option value="645">10:45</option><option value="650">10:50</option><option value="655">10:55</option><option value="660">11:00</option><option value="665">11:05</option><option value="670">11:10</option><option value="675">11:15</option><option value="680">11:20</option><option value="685">11:25</option><option value="690">11:30</option><option value="695">11:35</option><option value="700">11:40</option><option value="705">11:45</option><option value="710">11:50</option><option value="715">11:55</option><option value="720">12:00</option><option value="725">12:05</option><option value="730">12:10</option><option value="735">12:15</option><option value="740">12:20</option><option value="745">12:25</option><option value="750">12:30</option><option value="755">12:35</option><option value="760">12:40</option><option value="765">12:45</option><option value="770">12:50</option><option value="775">12:55</option><option value="780">13:00</option><option value="785">13:05</option><option value="790">13:10</option><option value="795">13:15</option><option value="800">13:20</option><option value="805">13:25</option><option value="810">13:30</option><option value="815">13:35</option><option value="820">13:40</option><option value="825">13:45</option><option value="830">13:50</option><option value="835">13:55</option><option value="840">14:00</option><option value="845">14:05</option><option value="850">14:10</option><option value="855">14:15</option><option value="860">14:20</option><option value="865">14:25</option><option value="870">14:30</option><option value="875">14:35</option><option value="880">14:40</option><option value="885">14:45</option><option value="890">14:50</option><option value="895">14:55</option><option value="900">15:00</option><option value="905">15:05</option><option value="910">15:10</option><option value="915">15:15</option><option value="920">15:20</option><option value="925">15:25</option><option value="930">15:30</option><option value="935">15:35</option><option value="940">15:40</option><option value="945">15:45</option><option value="950">15:50</option><option value="955">15:55</option><option value="960">16:00</option><option value="965">16:05</option><option value="970">16:10</option><option value="975">16:15</option><option value="980">16:20</option><option value="985">16:25</option><option value="990">16:30</option><option value="995">16:35</option><option value="1000">16:40</option><option value="1005">16:45</option><option value="1010">16:50</option><option value="1015">16:55</option><option value="1020">17:00</option><option value="1025">17:05</option><option value="1030">17:10</option><option value="1035">17:15</option><option value="1040">17:20</option><option value="1045">17:25</option><option value="1050">17:30</option><option value="1055">17:35</option><option value="1060">17:40</option><option value="1065">17:45</option><option value="1070">17:50</option><option value="1075">17:55</option><option value="1080">18:00</option><option value="1085">18:05</option><option value="1090">18:10</option><option value="1095">18:15</option><option value="1100">18:20</option><option value="1105">18:25</option><option value="1110">18:30</option><option value="1115">18:35</option><option value="1120">18:40</option><option value="1125">18:45</option><option value="1130">18:50</option><option value="1135">18:55</option><option value="1140">19:00</option><option value="1145">19:05</option><option value="1150">19:10</option><option value="1155">19:15</option><option value="1160">19:20</option><option value="1165">19:25</option><option value="1170">19:30</option><option value="1175">19:35</option><option value="1180">19:40</option><option value="1185">19:45</option><option value="1190">19:50</option><option value="1195">19:55</option><option value="1200">20:00</option><option value="1205">20:05</option><option value="1210">20:10</option><option value="1215">20:15</option><option value="1220">20:20</option><option value="1225">20:25</option><option value="1230">20:30</option><option value="1235">20:35</option><option value="1240">20:40</option><option value="1245">20:45</option><option value="1250">20:50</option><option value="1255">20:55</option><option value="1260">21:00</option><option value="1265">21:05</option><option value="1270">21:10</option><option value="1275">21:15</option><option value="1280">21:20</option><option value="1285">21:25</option><option value="1290">21:30</option><option value="1295">21:35</option><option value="1300">21:40</option><option value="1305">21:45</option><option value="1310">21:50</option><option value="1315">21:55</option><option value="1320">22:00</option><option value="1325">22:05</option><option value="1330">22:10</option><option value="1335">22:15</option><option value="1340">22:20</option><option value="1345">22:25</option><option value="1350">22:30</option><option value="1355">22:35</option><option value="1360">22:40</option><option value="1365">22:45</option><option value="1370">22:50</option><option value="1375">22:55</option><option value="1380">23:00</option><option value="1385">23:05</option><option value="1390">23:10</option><option value="1395">23:15</option><option value="1400">23:20</option><option value="1405">23:25</option><option value="1410">23:30</option><option value="1415">23:35</option><option value="1420">23:40</option><option value="1425">23:45</option><option value="1430">23:50</option><option value="1435">23:55</option>
+                </select>
+                <select class="time_selects begin_day">
+                    <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option><option value="21">21</option><option value="22">22</option><option value="23">23</option><option value="24">24</option><option value="25">25</option><option value="26">26</option><option value="27">27</option><option value="28">28</option><option value="29">29</option><option value="30">30</option><option value="31">31</option>
+                </select>
+                <select class="time_selects begin_month">
+                    <option value="0">January</option><option value="1">February</option><option value="2">March</option><option value="3">April</option><option value="4">May</option><option value="5">June</option><option value="6">July</option><option value="7">August</option><option value="8">September</option><option value="9">October</option><option value="10">November</option><option value="11">December</option>
+                </select>
+                <select class="time_selects begin_year">
+                    <option value="2010">2010</option><option value="2011">2011</option><option value="2012">2012</option><option value="2013">2013</option><option value="2014">2014</option><option value="2015">2015</option><option value="2016">2016</option><option value="2017">2017</option><option value="2018">2018</option><option value="2019">2019</option>
+                </select>
+            </div>
+            <div class="time_range">Until:
+                <select class="time_selects end_time">
+                    <option value="0">00:00</option><option value="5">00:05</option><option value="10">00:10</option><option value="15">00:15</option><option value="20">00:20</option><option value="25">00:25</option><option value="30">00:30</option><option value="35">00:35</option><option value="40">00:40</option><option value="45">00:45</option><option value="50">00:50</option><option value="55">00:55</option><option value="60">01:00</option><option value="65">01:05</option><option value="70">01:10</option><option value="75">01:15</option><option value="80">01:20</option><option value="85">01:25</option><option value="90">01:30</option><option value="95">01:35</option><option value="100">01:40</option><option value="105">01:45</option><option value="110">01:50</option><option value="115">01:55</option><option value="120">02:00</option><option value="125">02:05</option><option value="130">02:10</option><option value="135">02:15</option><option value="140">02:20</option><option value="145">02:25</option><option value="150">02:30</option><option value="155">02:35</option><option value="160">02:40</option><option value="165">02:45</option><option value="170">02:50</option><option value="175">02:55</option><option value="180">03:00</option><option value="185">03:05</option><option value="190">03:10</option><option value="195">03:15</option><option value="200">03:20</option><option value="205">03:25</option><option value="210">03:30</option><option value="215">03:35</option><option value="220">03:40</option><option value="225">03:45</option><option value="230">03:50</option><option value="235">03:55</option><option value="240">04:00</option><option value="245">04:05</option><option value="250">04:10</option><option value="255">04:15</option><option value="260">04:20</option><option value="265">04:25</option><option value="270">04:30</option><option value="275">04:35</option><option value="280">04:40</option><option value="285">04:45</option><option value="290">04:50</option><option value="295">04:55</option><option value="300">05:00</option><option value="305">05:05</option><option value="310">05:10</option><option value="315">05:15</option><option value="320">05:20</option><option value="325">05:25</option><option value="330">05:30</option><option value="335">05:35</option><option value="340">05:40</option><option value="345">05:45</option><option value="350">05:50</option><option value="355">05:55</option><option value="360">06:00</option><option value="365">06:05</option><option value="370">06:10</option><option value="375">06:15</option><option value="380">06:20</option><option value="385">06:25</option><option value="390">06:30</option><option value="395">06:35</option><option value="400">06:40</option><option value="405">06:45</option><option value="410">06:50</option><option value="415">06:55</option><option value="420">07:00</option><option value="425">07:05</option><option value="430">07:10</option><option value="435">07:15</option><option value="440">07:20</option><option value="445">07:25</option><option value="450">07:30</option><option value="455">07:35</option><option value="460">07:40</option><option value="465">07:45</option><option value="470">07:50</option><option value="475">07:55</option><option value="480">08:00</option><option value="485">08:05</option><option value="490">08:10</option><option value="495">08:15</option><option value="500">08:20</option><option value="505">08:25</option><option value="510">08:30</option><option value="515">08:35</option><option value="520">08:40</option><option value="525">08:45</option><option value="530">08:50</option><option value="535">08:55</option><option value="540">09:00</option><option value="545">09:05</option><option value="550">09:10</option><option value="555">09:15</option><option value="560">09:20</option><option value="565">09:25</option><option value="570">09:30</option><option value="575">09:35</option><option value="580">09:40</option><option value="585">09:45</option><option value="590">09:50</option><option value="595">09:55</option><option value="600">10:00</option><option value="605">10:05</option><option value="610">10:10</option><option value="615">10:15</option><option value="620">10:20</option><option value="625">10:25</option><option value="630">10:30</option><option value="635">10:35</option><option value="640">10:40</option><option value="645">10:45</option><option value="650">10:50</option><option value="655">10:55</option><option value="660">11:00</option><option value="665">11:05</option><option value="670">11:10</option><option value="675">11:15</option><option value="680">11:20</option><option value="685">11:25</option><option value="690">11:30</option><option value="695">11:35</option><option value="700">11:40</option><option value="705">11:45</option><option value="710">11:50</option><option value="715">11:55</option><option value="720">12:00</option><option value="725">12:05</option><option value="730">12:10</option><option value="735">12:15</option><option value="740">12:20</option><option value="745">12:25</option><option value="750">12:30</option><option value="755">12:35</option><option value="760">12:40</option><option value="765">12:45</option><option value="770">12:50</option><option value="775">12:55</option><option value="780">13:00</option><option value="785">13:05</option><option value="790">13:10</option><option value="795">13:15</option><option value="800">13:20</option><option value="805">13:25</option><option value="810">13:30</option><option value="815">13:35</option><option value="820">13:40</option><option value="825">13:45</option><option value="830">13:50</option><option value="835">13:55</option><option value="840">14:00</option><option value="845">14:05</option><option value="850">14:10</option><option value="855">14:15</option><option value="860">14:20</option><option value="865">14:25</option><option value="870">14:30</option><option value="875">14:35</option><option value="880">14:40</option><option value="885">14:45</option><option value="890">14:50</option><option value="895">14:55</option><option value="900">15:00</option><option value="905">15:05</option><option value="910">15:10</option><option value="915">15:15</option><option value="920">15:20</option><option value="925">15:25</option><option value="930">15:30</option><option value="935">15:35</option><option value="940">15:40</option><option value="945">15:45</option><option value="950">15:50</option><option value="955">15:55</option><option value="960">16:00</option><option value="965">16:05</option><option value="970">16:10</option><option value="975">16:15</option><option value="980">16:20</option><option value="985">16:25</option><option value="990">16:30</option><option value="995">16:35</option><option value="1000">16:40</option><option value="1005">16:45</option><option value="1010">16:50</option><option value="1015">16:55</option><option value="1020">17:00</option><option value="1025">17:05</option><option value="1030">17:10</option><option value="1035">17:15</option><option value="1040">17:20</option><option value="1045">17:25</option><option value="1050">17:30</option><option value="1055">17:35</option><option value="1060">17:40</option><option value="1065">17:45</option><option value="1070">17:50</option><option value="1075">17:55</option><option value="1080">18:00</option><option value="1085">18:05</option><option value="1090">18:10</option><option value="1095">18:15</option><option value="1100">18:20</option><option value="1105">18:25</option><option value="1110">18:30</option><option value="1115">18:35</option><option value="1120">18:40</option><option value="1125">18:45</option><option value="1130">18:50</option><option value="1135">18:55</option><option value="1140">19:00</option><option value="1145">19:05</option><option value="1150">19:10</option><option value="1155">19:15</option><option value="1160">19:20</option><option value="1165">19:25</option><option value="1170">19:30</option><option value="1175">19:35</option><option value="1180">19:40</option><option value="1185">19:45</option><option value="1190">19:50</option><option value="1195">19:55</option><option value="1200">20:00</option><option value="1205">20:05</option><option value="1210">20:10</option><option value="1215">20:15</option><option value="1220">20:20</option><option value="1225">20:25</option><option value="1230">20:30</option><option value="1235">20:35</option><option value="1240">20:40</option><option value="1245">20:45</option><option value="1250">20:50</option><option value="1255">20:55</option><option value="1260">21:00</option><option value="1265">21:05</option><option value="1270">21:10</option><option value="1275">21:15</option><option value="1280">21:20</option><option value="1285">21:25</option><option value="1290">21:30</option><option value="1295">21:35</option><option value="1300">21:40</option><option value="1305">21:45</option><option value="1310">21:50</option><option value="1315">21:55</option><option value="1320">22:00</option><option value="1325">22:05</option><option value="1330">22:10</option><option value="1335">22:15</option><option value="1340">22:20</option><option value="1345">22:25</option><option value="1350">22:30</option><option value="1355">22:35</option><option value="1360">22:40</option><option value="1365">22:45</option><option value="1370">22:50</option><option value="1375">22:55</option><option value="1380">23:00</option><option value="1385">23:05</option><option value="1390">23:10</option><option value="1395">23:15</option><option value="1400">23:20</option><option value="1405">23:25</option><option value="1410">23:30</option><option value="1415">23:35</option><option value="1420">23:40</option><option value="1425">23:45</option><option value="1430">23:50</option><option value="1435">23:55</option>
+                </select>
+                <select class="time_selects end_day">
+                    <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option><option value="21">21</option><option value="22">22</option><option value="23">23</option><option value="24">24</option><option value="25">25</option><option value="26">26</option><option value="27">27</option><option value="28">28</option><option value="29">29</option><option value="30">30</option><option value="31">31</option>
+                </select>
+                <select class="time_selects end_month">
+                    <option value="0">January</option><option value="1">February</option><option value="2">March</option><option value="3">April</option><option value="4">May</option><option value="5">June</option><option value="6">July</option><option value="7">August</option><option value="8">September</option><option value="9">October</option><option value="10">November</option><option value="11">December</option>
+                </select>
+                <select class="time_selects end_year">
+                    <option value="2010">2010</option><option value="2011">2011</option><option value="2012">2012</option><option value="2013">2013</option><option value="2014">2014</option><option value="2015">2015</option><option value="2016">2016</option><option value="2017">2017</option><option value="2018">2018</option><option value="2019">2019</option>
+                </select>
+            </div>
+        </div>
+
+        <div id='calendar_repeat_root' class="calendar_repeat_root">
+             <div class="repeat_title">Repeat Event:<div class="buttons_root repeat_button">Enable</div></div>
+             <div class="repeat_display" style="display:none">
+
+                <div class="repeater">
+                    <input class="repeat_radio repeat_radio_daily" name="repeat" value="day" type="radio">Daily<br>
+                    <input class="repeat_radio repeat_radio_weekly" name="repeat" value="week" type="radio">Weekly<br>
+                    <input class="repeat_radio repeat_radio_monthly" name="repeat" value="month" type="radio">Monthly<br>
+                    <input class="repeat_radio repeat_radio_yearly" name="repeat" value="year" type="radio">Yearly
+                </div>
+
+                <div style="display: block" class="repeat_every_day">
+                    <div class="repeat_every_day_text repeat_every_day_first">
+                        <input name="repeat_every_day_radio" class="repeat_every_day_radio repeat_every_day_radio_day" type="radio">
+                        Every
+                        <input class="repeat_every_day_input" type="number">
+                        day
+                    </div>
+
+                    <div class="repeat_every_day_text repeat_every_day_workday">
+                        <input name="repeat_every_day_radio" class="repeat_every_day_radio repeat_every_day_radio_workday" type="radio">
+                        Every workday
+                    </div>
+                </div>
+
+                <div style="display: none" class="repeat_every_week" >
+                    <div class="repeat_every_week_first">
+                        &nbsp;&nbsp;Repeat every
+                        <input class="repeat_every_week_input" value="1" type="text">
+                        week next days:<br>
+                        &nbsp;<input class="repeat_checkbox" name="week_day" value="1" type="checkbox">Mon
+                        <input class="repeat_checkbox" name="week_day" value="2" type="checkbox">Tue
+                        <input class="repeat_checkbox" name="week_day" value="3" type="checkbox">Wed
+                        <input class="repeat_checkbox" name="week_day" value="4" type="checkbox">Thu
+                        <input class="repeat_checkbox" name="week_day" value="5" type="checkbox">Fri
+                        <input class="repeat_checkbox" name="week_day" value="6" type="checkbox">Sat
+                        <input class="repeat_checkbox" name="week_day" value="7" type="checkbox">Sun
+                    </div>
+                </div>
+
+                <div style="display: none;" class="repeat_every_month">
+                    <input class="repeat_radio_month" name="month_type" value="d" type="radio">Repeat
+                    <input class="repeat_text" name="month_day" value="1" type="text">day every
+                    <input class="repeat_text" name="month_count" value="1" type="text">month<br>
+                    <input class="repeat_radio_month" name="month_type" checked="" value="w" type="radio">On
+                    <input class="repeat_text" name="month_week2" value="1" type="text">
+                    <select name="month_day2">
+                        <option value="1">Monday</option>
+                        <option value="2">Tuesday</option>
+                        <option value="3">Wednesday</option>
+                        <option value="4">Thursday</option>
+                        <option value="5">Friday</option>
+                        <option value="6">Saturday</option>
+                        <option value="0">Sunday</option>
+                    </select>
+                    every
+                    <input class="repeat_text" name="month_count2" value="1" type="text">
+                    month<br>
+                </div>
+
+                <div style="display: none;" class="repeat_every_year">
+                    <input class="repeat_radio_year" name="year_type" value="d" type="radio">
+                    Every
+                    <input class="repeat_text" name="year_day" value="1" type="text">
+                    day
+                    <select name="year_month">
+                        <option value="0" selected="">January</option>
+                        <option value="1">February</option>
+                        <option value="2">March</option>
+                        <option value="3">April</option>
+                        <option value="4">May</option>
+                        <option value="5">June</option>
+                        <option value="6">July</option>
+                        <option value="7">August</option>
+                        <option value="8">September</option>
+                        <option value="9">October</option>
+                        <option value="10">November</option>
+                        <option value="11">December</option>
+                    </select>
+                    month<br>
+                    <input class="repeat_radio_year" name="year_type" checked="" value="w" type="radio">
+                    On
+                    <input class="repeat_text" name="year_week2" value="1" type="text">
+                    <select name="year_day2">
+                        <option value="1" selected="">Monday</option>
+                        <option value="2">Tuesday</option>
+                        <option value="3">Wednesday</option>
+                        <option value="4">Thursday</option>
+                        <option value="5">Friday</option>
+                        <option value="6">Saturday</option>
+                        <option value="7">Sunday</option>
+                    </select>
+                    of
+                    <select name="year_month2">
+                        <option value="0" selected="">January</option>
+                        <option value="1">February</option>
+                        <option value="2">March</option>
+                        <option value="3">April</option>
+                        <option value="4">May</option>
+                        <option value="5">June</option>
+                        <option value="6">July</option>
+                        <option value="7">August</option>
+                        <option value="8">September</option>
+                        <option value="9">October</option>
+                        <option value="10">November</option>
+                        <option value="11">December</option>
+                    </select>
+                    <br>
+                </div>
+
+                <div style="display: block;" class="repeat_end" >
+                    <input class="repeat_radio_end" name="end" checked="" type="radio">No end date<br>
+                    <input class="repeat_radio_end" name="end" type="radio">After
+                    <input class="repeat_text" name="occurences_count" value="1" type="text">occurrences<br>
+                    <input class="repeat_radio_end" name="end" type="radio">End by
+                    <input class="repeat_date" name="date_of_end" value="undefined" type="text"><br>
+                </div>
+            </div>
+        </div>
+
+        <div id='calendar_buttons' class="calendar_buttons">
+            <div class="buttons_root save_button">Save</div>
+            <div class="buttons_root cancel_button">Cancel</div>
+            <div class="buttons_root delete_button">Delete</div>
+        </div>
+
+        <div class="calendar_objects_root">
+            <div class="objects_text objects_object">
+                <input class="objects_input_root objects_input_object">Object:
+            </div>
+            <div class="objects_text objects_temperature">Temperature:
+                <select class="objects_input_root objects_input_temperature">
+                    <option value="14">14</option><option value="14.5">14.5</option>
+                    <option value="15">15</option><option value="15.5">15.5</option>
+                    <option value="16">16</option><option value="16.5">16.5</option>
+                    <option value="17">17</option><option value="17.5">17.5</option>
+                    <option value="18">18</option><option value="18.5">18.5</option>
+                    <option value="19">19</option><option value="19.5">19.5</option>
+                    <option value="20">20</option><option value="20.5">20.5</option>
+                    <option value="21">21</option><option value="21.5">21.5</option>
+                    <option value="22">22</option><option value="22.5">22.5</option>
+                    <option value="23">23</option><option value="23.5">23.5</option>
+                    <option value="24">24</option><option value="24.5">24.5</option>
+                    <option value="25">25</option><option value="25.5">25.5</option>
+                    <option value="26">26</option>
+                </select><span style="alignment: right">°C</span>
+                <!--<input class="objects_input_root objects_input_temperature">-->
+            </div>
+            <div class="objects_text objects_switch">Switch:
+                <input type=checkbox class="objects_input_root objects_input_switch">
+            </div>
+            <div class="objects_text objects_script">Script:
+                <input class="objects_input_root objects_input_script">
+            </div>
+        </div>
+
+        <div class="calendar_tips_root">
+            <div class="tip_root">Tip:</div>
+            <div class="tips">Lorem Ipsum</div>
+        </div>
+    </div>
+</body>
+</html>
