@@ -26,6 +26,19 @@ $(document).ready(function() {
      });
      */
 
+    $('.button').click(function(event) {
+        alert("Button clicked");
+        $.getJSON("iobroker.json", function(data) {
+            window.__iobroker = data;
+            $('#dialog-select-member').selectId('init', {
+                objects: window.__iobroker,
+                columns: ['name', 'type', 'role', 'enum', 'room'],
+                states:  null,
+                noImg:   true
+            });
+        });
+    });
+
     // Hide Assistent
     $('.cancel_button').click(function(event) {
         $('#calendarobject').hide();

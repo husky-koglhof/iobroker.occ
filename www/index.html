@@ -1,4 +1,3 @@
-<!DOCTYPE html>
 <html>
 <head>
 <meta charset='utf-8' />
@@ -11,6 +10,12 @@
 
 <link href='capa.css' rel='stylesheet' />
 <script src='capa.js'></script>
+
+<!-- Needed for Selectable ID's -->
+<link rel="stylesheet" type="text/css" href="lib/css/fancytree/ui.fancytree.min.css"/>
+<script type="text/javascript" src="lib/js/jquery.fancytree-all.min.js"></script>
+<script type="text/javascript" src="js/selectID.js"></script>
+
 </head>
 
 <body>
@@ -181,7 +186,7 @@
 
         <div class="calendar_objects_root">
             <div class="objects_text objects_object">
-                <input class="objects_input_root objects_input_object">Object:
+                <input class="objects_input_root objects_input_object">Object:<div class="button" style="border: 1px solid red">Show Objects</div>
             </div>
             <div class="objects_text objects_temperature">Temperature:
                 <select class="objects_input_root objects_input_temperature">
