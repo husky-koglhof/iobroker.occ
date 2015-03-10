@@ -28,6 +28,9 @@ http://%ip%:%web_port%/occ/index.html aufgerufen werden.
 
 ## Changelog
 
+### 0.0.4
+* (husky-koglhof) add Dependencies for automatic Installation
+
 ### 0.0.1
 * (husky-koglhof) HTML Prototyp
 

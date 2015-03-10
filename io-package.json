@@ -1,7 +1,7 @@
 {
     "common": {
         "name":                     "occ",
-        "version":                  "0.0.1",
+        "version":                  "0.0.4",
         "title":                    "Node.js Object Control Calendar Adapter",
         "desc":                     "Javascript/Node.js based Object Control Calendar adapter",
         "platform":                 "Javascript/Node.js",
@@ -9,7 +9,7 @@
         "icon":                     "logo.svg",
         "extIcon":                  "http://fullcalendar.io/images/logo.svg",
         "loglevel":                 "info",
-	"localLink":		    "http://%ip%:%web_port%/occ/index.html",
+	    "localLink":		        "http://%ip%:%web_port%/occ/index.html",
         "dependencies":             ["web"],
         "onlyWWW":                  true,
         "singleton":                true
