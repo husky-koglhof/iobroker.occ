@@ -25,7 +25,7 @@ function makeSocketAvailable() {
         $('#no-connection').show();
     }, 5000);
 
-    var socketURL = ':8082';
+    var socketURL = ':8084';
     var socketSESSION = 'myPrivateKey';
     if (typeof socketUrl != 'undefined') {
         socketURL = socketUrl;

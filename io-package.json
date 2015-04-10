@@ -1,7 +1,7 @@
 {
     "common": {
         "name":                     "occ",
-        "version":                  "0.0.8",
+        "version":                  "0.0.9",
         "title":                    "Node.js Object Control Calendar Adapter",
         "desc":                     "Javascript/Node.js based Object Control Calendar adapter",
         "platform":                 "Javascript/Node.js",
