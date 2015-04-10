@@ -250,6 +250,7 @@ alert($('#input_location').val());
         debugMessage();
 
         var subject = $("#input_title").val();  //the title of the event
+        var section = $("#input_location").val();  //the section of the event
 
         var dat = $("#jqdFrom").datepicker("getDate");
         var y = dat.getFullYear();
@@ -285,10 +286,10 @@ alert("edit");
             event = $("#calendar").fullCalendar( 'clientEvents', eventID );
 
             event.title = subject;
+            event.section = section;
             event.start = dateStart;    // its a date string
             event.end = dateEnd;        // its a date string.
             event.color = color;
-            event.section = $("#input_location").val();
             event.id = eventID;
             event.allDay = allDay;
             $('#calendar').fullCalendar('removeEvents', eventID );
@@ -301,6 +302,7 @@ alert("new");
             event.title = subject;
             event.start = dateStart;    // its a date string
             event.end = dateEnd;        // its a date string.
+            event.section = section;
             event.color = color;
             event.id =  Math.floor((Math.random() * 1000000) + 1);
             event.allDay = allDay;
