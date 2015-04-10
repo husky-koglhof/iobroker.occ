@@ -1,6 +1,6 @@
 {
   "name": "iobroker.occ",
-  "version": "0.0.15",
+  "version": "0.0.16",
   "description": "Object Control Calendar for ioBroker",
   "main": "main.js",
   "scripts": {
