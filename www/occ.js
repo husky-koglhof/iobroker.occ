@@ -1,19 +1,3 @@
-/*
- // The following code provides a reliable pageX/pageY for IE, even if it’s not there:
- function fixPageXY(e) {
- if (e.pageX == null && e.clientX != null ) {
- var html = document.documentElement
- var body = document.body
-
- e.pageX = e.clientX + (html.scrollLeft || body && body.scrollLeft || 0)
- e.pageX -= html.clientLeft || 0
-
- e.pageY = e.clientY + (html.scrollTop || body && body.scrollTop || 0)
- e.pageY -= html.clientTop || 0
- }
- }
- */
-/*
 var socket;
 
 function buildDeviceList(elem, current) {
@@ -90,7 +74,6 @@ function makeSocketAvailable() {
         }
     });
 }
-*/
 
 function hideFromTo(checked) {
     $('#jqdFrom').attr('disabled', checked);
@@ -327,9 +310,9 @@ alert("new");
         $("#event_Dialog").dialog('close');
     });
     /*******************************************************************/
-    // makeSocketAvailable();
+    makeSocketAvailable();
     // Build Device List
-    // buildDeviceList();
+    buildDeviceList();
     /*******************************************************************/
     /*******************************************************************/
 
