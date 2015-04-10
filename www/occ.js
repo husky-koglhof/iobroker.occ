@@ -1,77 +1,18 @@
-var socket;
+// var socket;
 
 function buildDeviceList(elem, current) {
-    socket.emit('getObjectView', 'hm-rpc', 'listDevices', {startkey: 'hm-rpc.', endkey: 'hm-rpc.\u9999'}, function (err, res) {
+    //socket.emit('getObjectView', 'hm-rpc', 'listDevices', {startkey: 'hm-rpc.', endkey: 'hm-rpc.\u9999'}, function (err, res) {
+    servConn.sendCommand('getObjectView', 'hm-rpc', 'listDevices', {startkey: 'hm-rpc.', endkey: 'hm-rpc.\u9999'}, function (err, res) {
         var line = "";
         if (!err && res) {
             for (var i = 0; i < res.rows.length; i++) {
-                //{"id":"hm-rpc.0.LEQ1155931.1","value":{"ADDRESS":"LEQ1155931:1","VERSION":1}}
                 if (res.rows[i].value.ADDRESS.indexOf(":") > -1) continue;
                 if (res.rows[i].value.ADDRESS == "") continue;
                 line += '<input type="radio" class="interface-set" name="iface_' + i + '" data-device-index="' + i + '" data-device="' + res.rows[i].value.ADDRESS + '" value="' + res.rows[i].value.ADDRESS + '">' + res.rows[i].value.ADDRESS + '<br>';
             }
-            //alert(line);
             $('.allIDs').replaceWith(line);
         }
         $(elem).val(current);
-    });
-}
-
-function makeSocketAvailable() {
-// Show "no connection" message after 5 seconds
-    var disconnectTimeout = setTimeout(function () {
-        disconnectTimeout = null;
-        //Show disconnected message
-        $('#no-connection').show();
-    }, 5000);
-
-    var socketURL = ':8084';
-    var socketSESSION = 'myPrivateKey';
-    if (typeof socketUrl != 'undefined') {
-        socketURL = socketUrl;
-        if (socketURL && socketURL[0] == ':') {
-            socketURL = 'http://' + location.hostname + socketURL;
-        }
-        socketSESSION = socketSession;
-    }
-
-    //var socket = io.connect(socketURL, {
-    socket = io.connect(socketURL, {
-        'query': 'key=' + socketSESSION,
-        'reconnection limit': 10000,
-        'max reconnection attempts': Infinity
-    });
-
-    socket.on('stateChange', function (changeId, state) {
-        if (graph && config && config._ids) {
-            for (j = 0; j < config._ids.length; j++) {
-                if (config._ids[j] == changeId) {
-                    seriesData[j].push({x: state.ts, y: state.val});
-                    graph.update();
-                    break;
-                }
-            }
-        }
-    });
-    socket.on('connect', function () {
-        socket.emit('name', 'occ');
-        console.log('connect');
-        if (disconnectTimeout) {
-            $('#no-connection').hide();
-            clearTimeout(disconnectTimeout);
-            disconnectTimeout = null;
-        }
-    });
-    socket.on('disconnect', function () {
-        console.log('disconnect');
-        if (!disconnectTimeout) {
-            disconnectTimeout = setTimeout(function () {
-                console.log('disconnected');
-                disconnectTimeout = null;
-                //Show disconnected message
-                $('#no-connection').show();
-            }, 5000);
-        }
     });
 }
 
@@ -136,6 +77,13 @@ function debugMessage() {
 }
 
 $(document).ready(function() {
+
+    servConn.init(null,{
+        onConnChange: function (isConnected) {
+            console.log("onConnChange isConnected="+isConnected);
+        }
+    });
+
     var $box = $('#colorPicker');
     $box.tinycolorpicker();
 
@@ -310,43 +258,34 @@ alert("Delete Button: "  + eventID);
     });
 
     function writeEventsToFile(event) {
-        servConn.init(null,{
-            onConnChange: function (isConnected) {
-                console.log("onConnChange isConnected="+isConnected);
-            }
-        });
-
         servConn.writeFile('occ-events.json', JSON.stringify(event, null, 2), function () {
             console.log("file was written with"+event);
         });
     }
 
     function readEventsFromFile() {
-        this.conn.readFile(this.projectPrefix + 'occ-events.json', function (err, data) {
-            if (err) alert(that.projectPrefix + 'occ-events.json ' + err);
+        servConn.readFile('occ-events.json', function (err, data) {
+            if (err) alert('occ-events.json ' + err);
 
             if (data) {
                 if (typeof data == 'string') {
                     try {
-                        that.views = JSON.parse(data);
+                        that.allEvents = JSON.parse(data);
                     } catch (e) {
                         console.log('Cannot parse views file "' + that.projectPrefix + 'occ-events.json"');
                         alert('Cannot parse views file "' + that.projectPrefix + 'occ-events.json');
-                        that.views = null;
                     }
-                } else {
-                    that.views = data;
+
                 }
-                that.IDs = that.getUsedObjectIDs();
             } else {
-                that.views = null;
+                that.allEvents = null;
             }
 
-            if (callback) callback.call(that, callbackArg);
+//            if (callback) callback.call(that, callbackArg);
         });
     }
     /*******************************************************************/
-    makeSocketAvailable();
+//    makeSocketAvailable();
     // Build Device List
     buildDeviceList();
     /*******************************************************************/
@@ -510,8 +449,8 @@ alert("Delete Button: "  + eventID);
          */
     });
 
-    var socketUrl = ":8084";
-    var socketSession = "";
+//    var socketUrl = ":8084";
+//    var socketSession = "";
 
     $('#dialog-select-member').selectId('init', {
         filter: {
