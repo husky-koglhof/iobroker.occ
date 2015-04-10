@@ -1,7 +1,4 @@
-// var socket;
-
 function buildDeviceList(elem, current) {
-    //socket.emit('getObjectView', 'hm-rpc', 'listDevices', {startkey: 'hm-rpc.', endkey: 'hm-rpc.\u9999'}, function (err, res) {
     servConn.sendCommand('getObjectView', 'hm-rpc', 'listDevices', {startkey: 'hm-rpc.', endkey: 'hm-rpc.\u9999'}, function (err, res) {
         var line = "";
         if (!err && res) {
@@ -170,7 +167,6 @@ $(document).ready(function() {
 
     $("#button_delete").click(function() {
         var eventID = $('#eventID').val();
-alert("Delete Button: "  + eventID);
         if (eventID > 0) {
             $('#calendar').fullCalendar('removeEvents', eventID);
             $("#event_Dialog").dialog('close');
@@ -253,13 +249,13 @@ alert("Delete Button: "  + eventID);
             $('#calendar').fullCalendar('renderEvent', event);
         }
 
-        $("#event_Dialog").dialog('close');
         writeEventsToFile(event);
+        $("#event_Dialog").dialog('close');
     });
 
     function writeEventsToFile(event) {
         servConn.writeFile('occ-events.json', JSON.stringify(event, null, 2), function () {
-            console.log("file was written with"+event);
+            console.log("file was written with"+JSON.stringify(event, null, 2));
         });
     }
 
@@ -280,17 +276,13 @@ alert("Delete Button: "  + eventID);
             } else {
                 that.allEvents = null;
             }
-
-//            if (callback) callback.call(that, callbackArg);
+            callback = data;
         });
     }
     /*******************************************************************/
-//    makeSocketAvailable();
     // Build Device List
     buildDeviceList();
     /*******************************************************************/
-    /*******************************************************************/
-
     // Calendar Functions
     $('#calendar').fullCalendar({
         header: {
@@ -422,6 +414,7 @@ alert("Delete Button: "  + eventID);
         eventResize: function(event) {
             alert("Resize" + event.title);
         },
+        events: readEventsFromFile(),
         // Create Events from Database / Filesystem, must be in JSON Format
         // events: "http://localhost:8888/fullcalendar/events.php",
         /*
@@ -448,9 +441,6 @@ alert("Delete Button: "  + eventID);
          section=holds Object from ioBroker (e.g. hm-rpc.0{name": "JEQ0221873"})
          */
     });
-
-//    var socketUrl = ":8084";
-//    var socketSession = "";
 
     $('#dialog-select-member').selectId('init', {
         filter: {
