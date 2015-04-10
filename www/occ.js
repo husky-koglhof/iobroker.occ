@@ -306,7 +306,39 @@ alert("Delete Button: "  + eventID);
         }
 
         $("#event_Dialog").dialog('close');
+        writeEventsToFile(event);
     });
+
+    function writeEventsToFile(event) {
+        servConn.writeFile('occ-events.json', JSON.stringify(event, null, 2), function () {
+            if (callback) callback();
+        });
+    }
+
+    function readEventsFromFile() {
+        this.conn.readFile(this.projectPrefix + 'occ-events.json', function (err, data) {
+            if (err) alert(that.projectPrefix + 'occ-events.json ' + err);
+
+            if (data) {
+                if (typeof data == 'string') {
+                    try {
+                        that.views = JSON.parse(data);
+                    } catch (e) {
+                        console.log('Cannot parse views file "' + that.projectPrefix + 'occ-events.json"');
+                        alert('Cannot parse views file "' + that.projectPrefix + 'occ-events.json');
+                        that.views = null;
+                    }
+                } else {
+                    that.views = data;
+                }
+                that.IDs = that.getUsedObjectIDs();
+            } else {
+                that.views = null;
+            }
+
+            if (callback) callback.call(that, callbackArg);
+        });
+    }
     /*******************************************************************/
     makeSocketAvailable();
     // Build Device List
