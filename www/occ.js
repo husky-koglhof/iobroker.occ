@@ -234,7 +234,6 @@ alert("Delete Button: "  + eventID);
     });
 
     $('#button_location').click(function(event) {
-alert($('#input_location').val());
         $('#calendarobject').hide();
         var id = $(this).attr('data-ids');
 
@@ -279,10 +278,8 @@ alert($('#input_location').val());
         var color = $('#colorPicker').data("plugin_tinycolorpicker").colorHex;
 
         var eventID = $('#eventID').val();
-alert("Save Button: "  + eventID);
         if (eventID > 0) {
             // Edit Mode
-alert("edit");
             event = $("#calendar").fullCalendar( 'clientEvents', eventID );
 
             event.title = subject;
@@ -296,7 +293,6 @@ alert("edit");
             $('#calendar').fullCalendar('renderEvent', event);
         } else {
             // New Event
-alert("new");
             event = new Object();
 
             event.title = subject;
@@ -332,11 +328,13 @@ alert("new");
         selectHelper: true,
         // Select new Timerange = Create a new Planning Entry
         select: function(start, end, allDay) {
+            $('#eventID').val(-1);
+            $('#input_location').val("");
+
             var m_begin = $.fullCalendar.moment(start);
             var m_end = $.fullCalendar.moment(end);
             var all_day = !m_begin.hasTime();
-alert("select");
-$('#eventID').val(-1);
+
             var time_begin = (m_begin.hours()*60+m_begin.minutes());
             var day_begin = (m_begin.date());
             var month_begin = (m_begin.months());
@@ -382,7 +380,6 @@ $('#eventID').val(-1);
             $('#input_title').val(event.title);
 
             $('#eventID').val(event.id);
-alert("ID = "  + event.id);
 
             var m_begin = $.fullCalendar.moment(event.start);
             var m_end = $.fullCalendar.moment(event.end);
