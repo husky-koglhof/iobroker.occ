@@ -19,26 +19,26 @@
 7 verbose parsed url   href: '.' }
 8 silly lockFile 3a52ce78- .
 9 verbose lock . /Users/christian/.npm/3a52ce78-.lock
-10 verbose tar pack [ '/Users/christian/.npm/iobroker.occ/0.0.6/package.tgz', '.' ]
-11 verbose tarball /Users/christian/.npm/iobroker.occ/0.0.6/package.tgz
+10 verbose tar pack [ '/Users/christian/.npm/iobroker.occ/0.0.11/package.tgz', '.' ]
+11 verbose tarball /Users/christian/.npm/iobroker.occ/0.0.11/package.tgz
 12 verbose folder .
-13 info prepublish iobroker.occ@0.0.6
+13 info prepublish iobroker.occ@0.0.11
 14 silly lockFile 1f1177db-tar tar://.
 15 verbose lock tar://. /Users/christian/.npm/1f1177db-tar.lock
-16 silly lockFile 0f41ec05-m-iobroker-occ-0-0-6-package-tgz tar:///Users/christian/.npm/iobroker.occ/0.0.6/package.tgz
-17 verbose lock tar:///Users/christian/.npm/iobroker.occ/0.0.6/package.tgz /Users/christian/.npm/0f41ec05-m-iobroker-occ-0-0-6-package-tgz.lock
+16 silly lockFile c1653c21--iobroker-occ-0-0-11-package-tgz tar:///Users/christian/.npm/iobroker.occ/0.0.11/package.tgz
+17 verbose lock tar:///Users/christian/.npm/iobroker.occ/0.0.11/package.tgz /Users/christian/.npm/c1653c21--iobroker-occ-0-0-11-package-tgz.lock
 18 silly lockFile 1f1177db-tar tar://.
 19 silly lockFile 1f1177db-tar tar://.
-20 silly lockFile 0f41ec05-m-iobroker-occ-0-0-6-package-tgz tar:///Users/christian/.npm/iobroker.occ/0.0.6/package.tgz
-21 silly lockFile 0f41ec05-m-iobroker-occ-0-0-6-package-tgz tar:///Users/christian/.npm/iobroker.occ/0.0.6/package.tgz
-22 silly lockFile fc810fc7-n-npm-iobroker-occ-0-0-6-package /Users/christian/.npm/iobroker.occ/0.0.6/package
-23 verbose lock /Users/christian/.npm/iobroker.occ/0.0.6/package /Users/christian/.npm/fc810fc7-n-npm-iobroker-occ-0-0-6-package.lock
-24 silly lockFile fc810fc7-n-npm-iobroker-occ-0-0-6-package /Users/christian/.npm/iobroker.occ/0.0.6/package
-25 silly lockFile fc810fc7-n-npm-iobroker-occ-0-0-6-package /Users/christian/.npm/iobroker.occ/0.0.6/package
+20 silly lockFile c1653c21--iobroker-occ-0-0-11-package-tgz tar:///Users/christian/.npm/iobroker.occ/0.0.11/package.tgz
+21 silly lockFile c1653c21--iobroker-occ-0-0-11-package-tgz tar:///Users/christian/.npm/iobroker.occ/0.0.11/package.tgz
+22 silly lockFile fdfd62ce--npm-iobroker-occ-0-0-11-package /Users/christian/.npm/iobroker.occ/0.0.11/package
+23 verbose lock /Users/christian/.npm/iobroker.occ/0.0.11/package /Users/christian/.npm/fdfd62ce--npm-iobroker-occ-0-0-11-package.lock
+24 silly lockFile fdfd62ce--npm-iobroker-occ-0-0-11-package /Users/christian/.npm/iobroker.occ/0.0.11/package
+25 silly lockFile fdfd62ce--npm-iobroker-occ-0-0-11-package /Users/christian/.npm/iobroker.occ/0.0.11/package
 26 silly lockFile 3a52ce78- .
 27 silly lockFile 3a52ce78- .
 28 silly publish { name: 'iobroker.occ',
-28 silly publish   version: '0.0.6',
+28 silly publish   version: '0.0.11',
 28 silly publish   description: 'Object Control Calendar for ioBroker',
 28 silly publish   main: 'main.js',
 28 silly publish   scripts:
@@ -56,15 +56,50 @@
 28 silly publish   bugs: { url: 'https://github.com/husky-koglhof/iobroker.occ/issues' },
 28 silly publish   readme: '# iobroker.occ\n\n## Dokumentation\n\nDer Adapter Object Control Calendar (kurz iobroker.occ) ist ein Webkalender auf Basis fullcalendar (http://www.fullcalendar.io).\nMit dem Kalender werden Homematic Thermostaten, Homematic Funk-Releais und MAX! Thermostaten zeitlich gesteuert.\n\n### Installation\n\n* iobroker.occ wird mittels npm install iobroker.occ im Root Verzeichnis des ioBroker installiert.\n* In diesem Zuge wird der fullcalendar heruntergeladen.\n* Der Adapter hat den web Adapter als Abhängigkeit.\n\n### Konfiguration\n\nDerzeit existieren noch keine Einstellungen.\n\n### Anwendung\n\nDer Adapter wird über den web Adapter zur Verfügung gestellt und kann dann mittels\nhttp://%ip%:%web_port%/occ/index.html aufgerufen werden.\n\n## Todo\n\n* Doku, Doku, Doku\n* Übersetzung\n* Umbau von HTML-Prototyp zu integriertem Adapter mit Steuerung\n\n## Changelog\n\n### 0.0.2\n* (husky-koglhof) add Dependencies for automatic Installation\n\n### 0.0.1\n* (husky-koglhof) HTML Prototyp\n\n## Lizenz\n\nCopyright (c) 2015 husky-koglhof\n\n[CC BY-NC-SA 4.0](http://creativecommons.org/licenses/by-nc-sa/4.0/)\n\n\nDer obige Urheberrechtsvermerk ist in allen Kopien oder Teilkopien der Software beizulegen.\n\nDIE SOFTWARE WIRD OHNE JEDE AUSDRÜCKLICHE ODER IMPLIZIERTE GARANTIE BEREITGESTELLT, EINSCHLIESSLICH DER GARANTIE ZUR BENUTZUNG FÜR DEN VORGESEHENEN ODER EINEM BESTIMMTEN ZWECK SOWIE JEGLICHER RECHTSVERLETZUNG, JEDOCH NICHT DARAUF BESCHRÄNKT. IN KEINEM FALL SIND DIE AUTOREN ODER COPYRIGHTINHABER FÜR JEGLICHEN SCHADEN ODER SONSTIGE ANSPRÜCHE HAFTBAR ZU MACHEN, OB INFOLGE DER ERFÜLLUNG EINES VERTRAGES, EINES DELIKTES ODER ANDERS IM ZUSAMMENHANG MIT DER SOFTWARE ODER SONSTIGER VERWENDUNG DER SOFTWARE ENTSTANDEN.\n\nHomeMatic und BidCoS sind eingetragene Warenzeichen der [eQ-3 AG](http://eq-3.de)\n',
 28 silly publish   gitHead: '5ff004a6d93fa6fed0c7b17bbe5c604a1dfff731',
-28 silly publish   _id: 'iobroker.occ@0.0.6',
-28 silly publish   _shasum: '40663738c4ba618549120b4374044199842247bd',
+28 silly publish   _id: 'iobroker.occ@0.0.11',
+28 silly publish   _shasum: '3ec2137a7a04064980400af1dd03c2b4abae69ad',
 28 silly publish   _from: '.' }
-29 error need auth auth and email required for publishing
-29 error need auth You need to authorize this machine using `npm adduser`
-30 error System Darwin 14.1.0
-31 error command "node" "/usr/local/bin/npm" "publish"
-32 error cwd /Users/christian/WebstormProjects/iobroker.occ
-33 error node -v v0.10.36
-34 error npm -v 1.4.28
-35 error code ENEEDAUTH
-36 verbose exit [ 1, true ]
+29 verbose request where is /iobroker.occ
+30 verbose request registry https://registry.npmjs.org/
+31 verbose request id 42fb67a090e9c812
+32 verbose url raw /iobroker.occ
+33 verbose url resolving [ 'https://registry.npmjs.org/', './iobroker.occ' ]
+34 verbose url resolved https://registry.npmjs.org/iobroker.occ
+35 verbose request where is https://registry.npmjs.org/iobroker.occ
+36 info trying registry request attempt 1 at 18:48:06
+37 http PUT https://registry.npmjs.org/iobroker.occ
+38 http 403 https://registry.npmjs.org/iobroker.occ
+39 verbose headers { date: 'Fri, 10 Apr 2015 16:48:08 GMT',
+39 verbose headers   server: 'Apache',
+39 verbose headers   'content-type': 'application/json',
+39 verbose headers   'cache-control': 'max-age=60',
+39 verbose headers   'content-length': '96',
+39 verbose headers   'accept-ranges': 'bytes',
+39 verbose headers   via: '1.1 varnish',
+39 verbose headers   'x-served-by': 'cache-fra1235-FRA',
+39 verbose headers   'x-cache': 'MISS',
+39 verbose headers   'x-cache-hits': '0',
+39 verbose headers   'x-timer': 'S1428684486.847493,VS0,VE1725',
+39 verbose headers   'keep-alive': 'timeout=10, max=50',
+39 verbose headers   connection: 'Keep-Alive' }
+40 error publish Failed PUT 403
+41 error Error: "You cannot publish over the previously published version 0.0.11." : iobroker.occ
+41 error     at RegClient.<anonymous> (/usr/local/lib/node_modules/npm/node_modules/npm-registry-client/lib/request.js:308:14)
+41 error     at Request._callback (/usr/local/lib/node_modules/npm/node_modules/npm-registry-client/lib/request.js:246:65)
+41 error     at Request.self.callback (/usr/local/lib/node_modules/npm/node_modules/request/request.js:236:22)
+41 error     at Request.emit (events.js:98:17)
+41 error     at Request.<anonymous> (/usr/local/lib/node_modules/npm/node_modules/request/request.js:1142:14)
+41 error     at Request.emit (events.js:117:20)
+41 error     at IncomingMessage.<anonymous> (/usr/local/lib/node_modules/npm/node_modules/request/request.js:1096:12)
+41 error     at IncomingMessage.emit (events.js:117:20)
+41 error     at _stream_readable.js:944:16
+41 error     at process._tickCallback (node.js:442:13)
+42 error If you need help, you may report this *entire* log,
+42 error including the npm and node versions, at:
+42 error     <http://github.com/npm/npm/issues>
+43 error System Darwin 14.1.0
+44 error command "node" "/usr/local/bin/npm" "publish"
+45 error cwd /Users/christian/WebstormProjects/iobroker.occ
+46 error node -v v0.10.36
+47 error npm -v 1.4.28
+48 verbose exit [ 1, true ]

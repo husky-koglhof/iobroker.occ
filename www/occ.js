@@ -310,6 +310,7 @@ alert("Delete Button: "  + eventID);
     });
 
     function writeEventsToFile(event) {
+        servConn.init(null,null);
         servConn.writeFile('occ-events.json', JSON.stringify(event, null, 2), function () {
             if (callback) callback();
         });
