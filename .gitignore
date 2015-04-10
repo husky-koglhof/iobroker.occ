@@ -1,4 +1,4 @@
 www/fullcalendar.*
-www/lang/
-www/lib/
+#www/lang/
+#www/lib/
 .idea

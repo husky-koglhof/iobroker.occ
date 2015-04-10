@@ -1,0 +1,210 @@
+body
+{
+    margin: 40px 10px;
+    padding: 0;
+    font-family: Tahoma, Verdana, Arial, sans-serif;
+    font-size: 12px;
+    line-height: 24px;
+}
+
+#loading {
+    display: none;
+    position: absolute;
+    top: 10px;
+    right: 10px;
+}
+#calendar {
+    max-width: 1024px;
+    margin: 0 auto;
+}
+
+.ui-dialog
+{
+    padding: 4px 4px 4px 4px;
+}
+.ui-dialog .ui-dialog-titlebar
+{
+    padding: 10px 10px 10px 30px;
+}
+.ui-dialog .ui-dialog-titlebar-close
+{
+    right: 10px;
+}
+#input_title
+{
+    border: 1px #A9A9A9 solid;
+    text-align: left;
+    vertical-align: middle;
+}
+#input_location
+{
+    border: 1px #A9A9A9 solid;
+    text-align: left;
+    vertical-align: middle;
+}
+#jqdFrom
+{
+    border: 1px #A9A9A9 solid;
+    text-align: left;
+    vertical-align: middle;
+}
+.ui-datepicker
+{
+    z-index: 1003 !important;
+    display: none;
+}
+#jqdTo
+{
+    border: 1px #A9A9A9 solid;
+    text-align: left;
+    vertical-align: middle;
+}
+.ui-datepicker
+{
+    z-index: 1003 !important;
+    display: none;
+}
+#fromTime
+{
+    border: 1px #A9A9A9 solid;
+    text-align: left;
+    vertical-align: middle;
+}
+#toTime
+{
+    border: 1px #A9A9A9 solid;
+    text-align: left;
+    vertical-align: middle;
+}
+#jqdEnd
+{
+    border: 1px #A9A9A9 solid;
+    text-align: left;
+    vertical-align: middle;
+}
+.ui-datepicker
+{
+    z-index: 1003 !important;
+    display: none;
+}
+#Line1
+{
+    color: #A0A0A0;
+    background-color: #A0A0A0;
+    border-width: 0;
+    margin: 0;
+    padding: 0;
+}
+#Line3
+{
+    color: #A0A0A0;
+    background-color: #A0A0A0;
+    border-width: 0;
+    margin: 0;
+    padding: 0;
+}
+#dailyinput
+{
+    border: 1px #A9A9A9 solid;
+    text-align: right;
+    vertical-align: middle;
+}
+#weeklyinput
+{
+    border: 1px #A9A9A9 solid;
+    text-align: right;
+    vertical-align: middle;
+}
+#monthlyinput
+{
+    border: 1px #A9A9A9 solid;
+    text-align: right;
+    vertical-align: middle;
+}
+#repeaterTab
+{
+    padding: 4px 4px 4px 4px;
+}
+#repeaterTab .ui-tabs-nav li
+{
+    font-weight: normal;
+    font-style: normal;
+    margin: 0px 2px -1px 0px;
+}
+#repeaterTab .ui-tabs-nav li a
+{
+    padding: 4px 10px 4px 10px;
+}
+#yearlyinput
+{
+    border: 1px #A9A9A9 solid;
+    text-align: right;
+    vertical-align: middle;
+}
+#Line4
+{
+    color: #A0A0A0;
+    background-color: #A0A0A0;
+    border-width: 0;
+    margin: 0;
+    padding: 0;
+}
+#jQuerySpinner1
+{
+    margin: 3px 22px 3px 5px;
+    text-align: left;
+    vertical-align: middle;
+}
+#Line5
+{
+    border-width: 0;
+    height: 368px;
+    width: 8px;
+}
+#input_notes
+{
+    border: 1px #A9A9A9 solid;
+    background-color: #FFFFFF;
+    color :#000000;
+    text-align: left;
+    resize: none;
+}
+#Line2
+{
+    color: #A0A0A0;
+    background-color: #A0A0A0;
+    border-width: 0;
+    margin: 0;
+    padding: 0;
+}
+#monthButtons
+{
+    position:absolute;
+    width:58px;
+    height:28px;
+}
+#monthButtons .ui-button-text
+{
+    padding: 0;
+    line-height: 28px;
+}
+#monthButtons .ui-button-text-icon .ui-button-icon-primary,
+#monthButtons .ui-button-text-icons .ui-button-icon-primary,
+#monthButtons .ui-button-icons-only .ui-button-icon-primary
+{
+    left: auto;
+    right: 10px;
+}
+#monthButtons .ui-button-text-icons .ui-button-icon-secondary,
+#monthButtons .ui-button-icons-only .ui-button-icon-secondary
+{
+    right: auto;
+    left: 10px;
+}
+.color-box {
+    float:left;
+    width:30px;
+    height:30px;
+    margin:5px;
+    border: 1px solid white;
+}

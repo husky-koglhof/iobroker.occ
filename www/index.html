@@ -1,223 +1,339 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
+<!--<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">-->
 <head>
-<meta charset='utf-8' />
-<link href='fullcalendar.css' rel='stylesheet' />
-<link href='fullcalendar.print.css' rel='stylesheet' media='print' />
-<script src='lib/moment.min.js'></script>
-<script src='lib/jquery.min.js'></script>
-<script src='fullcalendar.min.js'></script>
-<script src='gcal.js'></script>
+    <title>Object Control Calendar</title>
 
-<link href='capa.css' rel='stylesheet' />
-<script src='capa.js'></script>
+    <link href="lib/cupertino/jquery-ui.min.css" rel="stylesheet" type="text/css">
+    <link type="text/css" rel="stylesheet" href="lib/css/themes/jquery-ui/redmond/jquery-ui.min.css">
+    <link type="text/css" rel="stylesheet" href="lib/css/fancytree/ui.fancytree.min.css"/>
+    <link href='fullcalendar.min.css' rel='stylesheet' />
+    <link href='iobroker.occ.css' rel='stylesheet' />
+    <link href="lib/css/tinycolorpicker.css" rel="stylesheet" type="text/css" media="screen"/>
 
-<!-- Needed for Selectable ID's -->
-<link rel="stylesheet" type="text/css" href="lib/css/fancytree/ui.fancytree.min.css"/>
-<script type="text/javascript" src="lib/js/jquery.fancytree-all.min.js"></script>
-<script type="text/javascript" src="js/selectID.js"></script>
+    <script type="text/javascript" src="lib/js/jquery-1.11.1.min.js"></script>
+    <script type="text/javascript" src="lib/js/jquery-ui-1.10.3.full.min.js"></script>
+    <script type="text/javascript" src="lib/js/jquery.fancytree-all.min.js"></script>
+    <script type="text/javascript" src="lib/js/translate.js"></script>
+    <script type="text/javascript" src="lib/js/selectID.js"></script>
+    <script type="text/javascript" src="lib/js/socket.io.js"></script>
+    <!--script type="text/javascript" src="_socket/info.js"></script-->
+    <script type="text/javascript" src='lib/moment.min.js'></script>
 
+    <script type="text/javascript" src='fullcalendar.min.js'></script>
+    <script type="text/javascript" src='gcal.js'></script>
+
+    <script type="text/javascript" src='iobroker.occ.js'></script>
+    <script type="text/javascript" src="lib/js/jquery.tinycolorpicker.min.js"></script>
 </head>
-
 <body>
-	<div id='loading'>loading...</div>
-	<div id='calendar'></div>
-    <!-- Assistent -->
-    <div id='calendarobject' class="calendarobject" style="display: none;">
-        <div id='calendar_title_root' class="calendar_title_root">
-            <div class="calendar_title"><input id="calendar_titles"></div>
+
+<div id='calendar' style="display: block;"></div>
+
+<div id="event_Dialog" title="Create a new Event" style="display: none;">
+    <input type="text" id="eventID" value="0" style="display:none">
+    <input type="text" id="input_title" style="position:absolute;left:16px;top:10px;width:209px;line-height:19px;z-index:72;" name="input_event" value="Set Name...">
+
+    <div id="colorPicker" style="position:absolute;top:12px;left:250px;z-index:172;">
+        <a class="color" style="width:15px;height:15px;"><div class="colorInner" style="width:15px;height:15px;"></div></a>
+        <div class="track" style="left:-120px;top:100px;"></div>
+        <ul class="dropdown"><li></li></ul>
+        <input type="hidden" class="colorInput"/>
+    </div>
+
+    <input type="text" id="input_location" style="position:absolute;left:16px;top:45px;width:210px;line-height:19px;z-index:73;" name="input_location" value="Select Object...">
+    <input type="button" id="button_location" name="button_location" value="Select" style="position:absolute;left:240px;top:37px;z-index:92;">
+
+    <input type="checkbox" id="checkbox_allday" name="checkbox_allday" value="on" style="position:absolute;left:92px;top:204px;z-index:74;" onchange="hideFromTo(this.checked)">
+
+    <div style="position:absolute;left:16px;top:204px;width:46px;height:16px;z-index:75;text-align:left;">
+        <span>all-day</span>
+    </div>
+    <div style="position:absolute;left:16px;top:230px;width:46px;height:16px;z-index:76;text-align:left;">
+        <span>from:</span>
+    </div>
+    <div style="position:absolute;left:16px;top:257px;width:46px;height:16px;z-index:77;text-align:left;">
+        <span>to:</span>
+    </div>
+
+    <!-- From / To -->
+    <input type="text" id="jqdFrom" style="position:absolute;left:95px;top:226px;width:110px;z-index:78;" name="input_from" value="03/16/2015">
+    <input type="text" id="jqdTo" style="position:absolute;left:95px;top:253px;width:110px;z-index:79;" name="input_to" value="03/16/2015">
+    <input type="text" id="fromTime" style="position:absolute;left:214px;top:226px;width:51px;z-index:80;" name="input_from_hour" value="12:00">
+    <input type="text" id="toTime" style="position:absolute;left:214px;top:253px;width:51px;z-index:81;" name="input_to_hour" value="12:30">
+    <select name="combo_from" size="1" id="fromampm" style="position:absolute;left:274px;top:226px;width:55px;z-index:82;">
+        <option selected value="AM">AM</option>
+        <option value="PM">PM</option>
+    </select>
+    <select name="combo_to" size="1" id="toampm" style="position:absolute;left:274px;top:253px;width:55px;z-index:83;">
+        <option selected value="AM">AM</option>
+        <option value="PM">PM</option>
+    </select>
+    <!-- From / To -->
+
+    <!-- Repeater -->
+    <div style="position:absolute;left:16px;top:307px;width:46px;height:16px;z-index:84;text-align:left;">
+        <span>repeat:</span>
+    </div>
+    <select name="repeaterCombo" size="1" id="repeaterCombo" style="position:absolute;left:94px;top:305px;width:194px;z-index:85;">
+        <option selected value="None" onclick="$('#repeaterTab').hide();$('#event_Dialog').dialog( 'option', 'width', 345 );return true;">None</option>
+        <option value="day" onclick="$('#repeaterTab').hide();$('#event_Dialog').dialog( 'option', 'width', 345 );return true;">Every Day</option>
+        <option value="week" onclick="$('#repeaterTab').hide();$('#event_Dialog').dialog( 'option', 'width', 345 );return true;">Every Week</option>
+        <option value="month" onclick="$('#repeaterTab').hide();$('#event_Dialog').dialog( 'option', 'width', 345 );return true;">Every Month</option>
+        <option value="year" onclick="$('#repeaterTab').hide();$('#event_Dialog').dialog( 'option', 'width', 345 );return true;">Every Year</option>
+        <option value="custom" onclick="$('#repeaterTab').show();$('#event_Dialog').dialog( 'option', 'width', 690 );return true;">Custom...</option>
+    </select>
+    <!-- Repeater -->
+
+    <div style="position:absolute;left:16px;top:340px;width:46px;height:16px;z-index:86;text-align:left;">
+        <span>end:</span>
+    </div>
+    <select name="endCombo" size="1" id="endCombo" style="position:absolute;left:94px;top:337px;width:100px;z-index:87;">
+        <option selected value="never" onclick="$('#jqdEnd').attr('disabled', true)">Never</option>
+        <option value="times" onclick="$('#jqdEnd').attr('disabled', false)">After a number of Times</option>
+        <option value="date" onclick="$('#jqdEnd').attr('disabled', false)">On Date</option>
+    </select>
+
+    <input type="text" id="jqdEnd" disabled=true style="disabled:true;position:absolute;left:203px;top:337px;width:114px;z-index:88;" name="input_end" value="03/16/2015">
+    <hr id="Line1" style="position:absolute;left:16px;top:288px;width:317px;height:1px;z-index:89;">
+    <hr id="Line3" style="position:absolute;left:16px;top:81px;width:317px;height:1px;z-index:90;">
+    <div id="repeaterTab" style="display: none; position:absolute;left:346px;top:10px;z-index:91;width:330px;">
+    <ul>
+        <li><a href="#repeaterTab-page-0"><span>Daily</span></a></li>
+        <li><a href="#repeaterTab-page-1"><span>Weekly</span></a></li>
+        <li><a href="#repeaterTab-page-2"><span>Monthly</span></a></li>
+        <li><a href="#repeaterTab-page-3"><span>Yearly</span></a></li>
+    </ul>
+    <div style="height:297px;overflow:auto;padding:0;" id="repeaterTab-page-0">
+        <input type="text" id="dailyinput" style="position:absolute;left:65px;top:64px;width:30px;line-height:18px;z-index:0;" name="input_daily" value="1" maxlength="3">
+        <div style="position:absolute;left:110px;top:64px;width:36px;height:16px;z-index:1;text-align:left;">
+            <span>day</span>
         </div>
-
-        <div id='calendar_times_root' class="calendar_times_root">
-            <div class="time_range" style="">From:
-                <select class="time_selects begin_time">
-                    <option value="0">00:00</option><option value="5">00:05</option><option value="10">00:10</option><option value="15">00:15</option><option value="20">00:20</option><option value="25">00:25</option><option value="30">00:30</option><option value="35">00:35</option><option value="40">00:40</option><option value="45">00:45</option><option value="50">00:50</option><option value="55">00:55</option><option value="60">01:00</option><option value="65">01:05</option><option value="70">01:10</option><option value="75">01:15</option><option value="80">01:20</option><option value="85">01:25</option><option value="90">01:30</option><option value="95">01:35</option><option value="100">01:40</option><option value="105">01:45</option><option value="110">01:50</option><option value="115">01:55</option><option value="120">02:00</option><option value="125">02:05</option><option value="130">02:10</option><option value="135">02:15</option><option value="140">02:20</option><option value="145">02:25</option><option value="150">02:30</option><option value="155">02:35</option><option value="160">02:40</option><option value="165">02:45</option><option value="170">02:50</option><option value="175">02:55</option><option value="180">03:00</option><option value="185">03:05</option><option value="190">03:10</option><option value="195">03:15</option><option value="200">03:20</option><option value="205">03:25</option><option value="210">03:30</option><option value="215">03:35</option><option value="220">03:40</option><option value="225">03:45</option><option value="230">03:50</option><option value="235">03:55</option><option value="240">04:00</option><option value="245">04:05</option><option value="250">04:10</option><option value="255">04:15</option><option value="260">04:20</option><option value="265">04:25</option><option value="270">04:30</option><option value="275">04:35</option><option value="280">04:40</option><option value="285">04:45</option><option value="290">04:50</option><option value="295">04:55</option><option value="300">05:00</option><option value="305">05:05</option><option value="310">05:10</option><option value="315">05:15</option><option value="320">05:20</option><option value="325">05:25</option><option value="330">05:30</option><option value="335">05:35</option><option value="340">05:40</option><option value="345">05:45</option><option value="350">05:50</option><option value="355">05:55</option><option value="360">06:00</option><option value="365">06:05</option><option value="370">06:10</option><option value="375">06:15</option><option value="380">06:20</option><option value="385">06:25</option><option value="390">06:30</option><option value="395">06:35</option><option value="400">06:40</option><option value="405">06:45</option><option value="410">06:50</option><option value="415">06:55</option><option value="420">07:00</option><option value="425">07:05</option><option value="430">07:10</option><option value="435">07:15</option><option value="440">07:20</option><option value="445">07:25</option><option value="450">07:30</option><option value="455">07:35</option><option value="460">07:40</option><option value="465">07:45</option><option value="470">07:50</option><option value="475">07:55</option><option value="480">08:00</option><option value="485">08:05</option><option value="490">08:10</option><option value="495">08:15</option><option value="500">08:20</option><option value="505">08:25</option><option value="510">08:30</option><option value="515">08:35</option><option value="520">08:40</option><option value="525">08:45</option><option value="530">08:50</option><option value="535">08:55</option><option value="540">09:00</option><option value="545">09:05</option><option value="550">09:10</option><option value="555">09:15</option><option value="560">09:20</option><option value="565">09:25</option><option value="570">09:30</option><option value="575">09:35</option><option value="580">09:40</option><option value="585">09:45</option><option value="590">09:50</option><option value="595">09:55</option><option value="600">10:00</option><option value="605">10:05</option><option value="610">10:10</option><option value="615">10:15</option><option value="620">10:20</option><option value="625">10:25</option><option value="630">10:30</option><option value="635">10:35</option><option value="640">10:40</option><option value="645">10:45</option><option value="650">10:50</option><option value="655">10:55</option><option value="660">11:00</option><option value="665">11:05</option><option value="670">11:10</option><option value="675">11:15</option><option value="680">11:20</option><option value="685">11:25</option><option value="690">11:30</option><option value="695">11:35</option><option value="700">11:40</option><option value="705">11:45</option><option value="710">11:50</option><option value="715">11:55</option><option value="720">12:00</option><option value="725">12:05</option><option value="730">12:10</option><option value="735">12:15</option><option value="740">12:20</option><option value="745">12:25</option><option value="750">12:30</option><option value="755">12:35</option><option value="760">12:40</option><option value="765">12:45</option><option value="770">12:50</option><option value="775">12:55</option><option value="780">13:00</option><option value="785">13:05</option><option value="790">13:10</option><option value="795">13:15</option><option value="800">13:20</option><option value="805">13:25</option><option value="810">13:30</option><option value="815">13:35</option><option value="820">13:40</option><option value="825">13:45</option><option value="830">13:50</option><option value="835">13:55</option><option value="840">14:00</option><option value="845">14:05</option><option value="850">14:10</option><option value="855">14:15</option><option value="860">14:20</option><option value="865">14:25</option><option value="870">14:30</option><option value="875">14:35</option><option value="880">14:40</option><option value="885">14:45</option><option value="890">14:50</option><option value="895">14:55</option><option value="900">15:00</option><option value="905">15:05</option><option value="910">15:10</option><option value="915">15:15</option><option value="920">15:20</option><option value="925">15:25</option><option value="930">15:30</option><option value="935">15:35</option><option value="940">15:40</option><option value="945">15:45</option><option value="950">15:50</option><option value="955">15:55</option><option value="960">16:00</option><option value="965">16:05</option><option value="970">16:10</option><option value="975">16:15</option><option value="980">16:20</option><option value="985">16:25</option><option value="990">16:30</option><option value="995">16:35</option><option value="1000">16:40</option><option value="1005">16:45</option><option value="1010">16:50</option><option value="1015">16:55</option><option value="1020">17:00</option><option value="1025">17:05</option><option value="1030">17:10</option><option value="1035">17:15</option><option value="1040">17:20</option><option value="1045">17:25</option><option value="1050">17:30</option><option value="1055">17:35</option><option value="1060">17:40</option><option value="1065">17:45</option><option value="1070">17:50</option><option value="1075">17:55</option><option value="1080">18:00</option><option value="1085">18:05</option><option value="1090">18:10</option><option value="1095">18:15</option><option value="1100">18:20</option><option value="1105">18:25</option><option value="1110">18:30</option><option value="1115">18:35</option><option value="1120">18:40</option><option value="1125">18:45</option><option value="1130">18:50</option><option value="1135">18:55</option><option value="1140">19:00</option><option value="1145">19:05</option><option value="1150">19:10</option><option value="1155">19:15</option><option value="1160">19:20</option><option value="1165">19:25</option><option value="1170">19:30</option><option value="1175">19:35</option><option value="1180">19:40</option><option value="1185">19:45</option><option value="1190">19:50</option><option value="1195">19:55</option><option value="1200">20:00</option><option value="1205">20:05</option><option value="1210">20:10</option><option value="1215">20:15</option><option value="1220">20:20</option><option value="1225">20:25</option><option value="1230">20:30</option><option value="1235">20:35</option><option value="1240">20:40</option><option value="1245">20:45</option><option value="1250">20:50</option><option value="1255">20:55</option><option value="1260">21:00</option><option value="1265">21:05</option><option value="1270">21:10</option><option value="1275">21:15</option><option value="1280">21:20</option><option value="1285">21:25</option><option value="1290">21:30</option><option value="1295">21:35</option><option value="1300">21:40</option><option value="1305">21:45</option><option value="1310">21:50</option><option value="1315">21:55</option><option value="1320">22:00</option><option value="1325">22:05</option><option value="1330">22:10</option><option value="1335">22:15</option><option value="1340">22:20</option><option value="1345">22:25</option><option value="1350">22:30</option><option value="1355">22:35</option><option value="1360">22:40</option><option value="1365">22:45</option><option value="1370">22:50</option><option value="1375">22:55</option><option value="1380">23:00</option><option value="1385">23:05</option><option value="1390">23:10</option><option value="1395">23:15</option><option value="1400">23:20</option><option value="1405">23:25</option><option value="1410">23:30</option><option value="1415">23:35</option><option value="1420">23:40</option><option value="1425">23:45</option><option value="1430">23:50</option><option value="1435">23:55</option>
-                </select>
-                <select class="time_selects begin_day">
-                    <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option><option value="21">21</option><option value="22">22</option><option value="23">23</option><option value="24">24</option><option value="25">25</option><option value="26">26</option><option value="27">27</option><option value="28">28</option><option value="29">29</option><option value="30">30</option><option value="31">31</option>
-                </select>
-                <select class="time_selects begin_month">
-                    <option value="0">January</option><option value="1">February</option><option value="2">March</option><option value="3">April</option><option value="4">May</option><option value="5">June</option><option value="6">July</option><option value="7">August</option><option value="8">September</option><option value="9">October</option><option value="10">November</option><option value="11">December</option>
-                </select>
-                <select class="time_selects begin_year">
-                    <option value="2010">2010</option><option value="2011">2011</option><option value="2012">2012</option><option value="2013">2013</option><option value="2014">2014</option><option value="2015">2015</option><option value="2016">2016</option><option value="2017">2017</option><option value="2018">2018</option><option value="2019">2019</option>
-                </select>
-            </div>
-            <div class="time_range">Until:
-                <select class="time_selects end_time">
-                    <option value="0">00:00</option><option value="5">00:05</option><option value="10">00:10</option><option value="15">00:15</option><option value="20">00:20</option><option value="25">00:25</option><option value="30">00:30</option><option value="35">00:35</option><option value="40">00:40</option><option value="45">00:45</option><option value="50">00:50</option><option value="55">00:55</option><option value="60">01:00</option><option value="65">01:05</option><option value="70">01:10</option><option value="75">01:15</option><option value="80">01:20</option><option value="85">01:25</option><option value="90">01:30</option><option value="95">01:35</option><option value="100">01:40</option><option value="105">01:45</option><option value="110">01:50</option><option value="115">01:55</option><option value="120">02:00</option><option value="125">02:05</option><option value="130">02:10</option><option value="135">02:15</option><option value="140">02:20</option><option value="145">02:25</option><option value="150">02:30</option><option value="155">02:35</option><option value="160">02:40</option><option value="165">02:45</option><option value="170">02:50</option><option value="175">02:55</option><option value="180">03:00</option><option value="185">03:05</option><option value="190">03:10</option><option value="195">03:15</option><option value="200">03:20</option><option value="205">03:25</option><option value="210">03:30</option><option value="215">03:35</option><option value="220">03:40</option><option value="225">03:45</option><option value="230">03:50</option><option value="235">03:55</option><option value="240">04:00</option><option value="245">04:05</option><option value="250">04:10</option><option value="255">04:15</option><option value="260">04:20</option><option value="265">04:25</option><option value="270">04:30</option><option value="275">04:35</option><option value="280">04:40</option><option value="285">04:45</option><option value="290">04:50</option><option value="295">04:55</option><option value="300">05:00</option><option value="305">05:05</option><option value="310">05:10</option><option value="315">05:15</option><option value="320">05:20</option><option value="325">05:25</option><option value="330">05:30</option><option value="335">05:35</option><option value="340">05:40</option><option value="345">05:45</option><option value="350">05:50</option><option value="355">05:55</option><option value="360">06:00</option><option value="365">06:05</option><option value="370">06:10</option><option value="375">06:15</option><option value="380">06:20</option><option value="385">06:25</option><option value="390">06:30</option><option value="395">06:35</option><option value="400">06:40</option><option value="405">06:45</option><option value="410">06:50</option><option value="415">06:55</option><option value="420">07:00</option><option value="425">07:05</option><option value="430">07:10</option><option value="435">07:15</option><option value="440">07:20</option><option value="445">07:25</option><option value="450">07:30</option><option value="455">07:35</option><option value="460">07:40</option><option value="465">07:45</option><option value="470">07:50</option><option value="475">07:55</option><option value="480">08:00</option><option value="485">08:05</option><option value="490">08:10</option><option value="495">08:15</option><option value="500">08:20</option><option value="505">08:25</option><option value="510">08:30</option><option value="515">08:35</option><option value="520">08:40</option><option value="525">08:45</option><option value="530">08:50</option><option value="535">08:55</option><option value="540">09:00</option><option value="545">09:05</option><option value="550">09:10</option><option value="555">09:15</option><option value="560">09:20</option><option value="565">09:25</option><option value="570">09:30</option><option value="575">09:35</option><option value="580">09:40</option><option value="585">09:45</option><option value="590">09:50</option><option value="595">09:55</option><option value="600">10:00</option><option value="605">10:05</option><option value="610">10:10</option><option value="615">10:15</option><option value="620">10:20</option><option value="625">10:25</option><option value="630">10:30</option><option value="635">10:35</option><option value="640">10:40</option><option value="645">10:45</option><option value="650">10:50</option><option value="655">10:55</option><option value="660">11:00</option><option value="665">11:05</option><option value="670">11:10</option><option value="675">11:15</option><option value="680">11:20</option><option value="685">11:25</option><option value="690">11:30</option><option value="695">11:35</option><option value="700">11:40</option><option value="705">11:45</option><option value="710">11:50</option><option value="715">11:55</option><option value="720">12:00</option><option value="725">12:05</option><option value="730">12:10</option><option value="735">12:15</option><option value="740">12:20</option><option value="745">12:25</option><option value="750">12:30</option><option value="755">12:35</option><option value="760">12:40</option><option value="765">12:45</option><option value="770">12:50</option><option value="775">12:55</option><option value="780">13:00</option><option value="785">13:05</option><option value="790">13:10</option><option value="795">13:15</option><option value="800">13:20</option><option value="805">13:25</option><option value="810">13:30</option><option value="815">13:35</option><option value="820">13:40</option><option value="825">13:45</option><option value="830">13:50</option><option value="835">13:55</option><option value="840">14:00</option><option value="845">14:05</option><option value="850">14:10</option><option value="855">14:15</option><option value="860">14:20</option><option value="865">14:25</option><option value="870">14:30</option><option value="875">14:35</option><option value="880">14:40</option><option value="885">14:45</option><option value="890">14:50</option><option value="895">14:55</option><option value="900">15:00</option><option value="905">15:05</option><option value="910">15:10</option><option value="915">15:15</option><option value="920">15:20</option><option value="925">15:25</option><option value="930">15:30</option><option value="935">15:35</option><option value="940">15:40</option><option value="945">15:45</option><option value="950">15:50</option><option value="955">15:55</option><option value="960">16:00</option><option value="965">16:05</option><option value="970">16:10</option><option value="975">16:15</option><option value="980">16:20</option><option value="985">16:25</option><option value="990">16:30</option><option value="995">16:35</option><option value="1000">16:40</option><option value="1005">16:45</option><option value="1010">16:50</option><option value="1015">16:55</option><option value="1020">17:00</option><option value="1025">17:05</option><option value="1030">17:10</option><option value="1035">17:15</option><option value="1040">17:20</option><option value="1045">17:25</option><option value="1050">17:30</option><option value="1055">17:35</option><option value="1060">17:40</option><option value="1065">17:45</option><option value="1070">17:50</option><option value="1075">17:55</option><option value="1080">18:00</option><option value="1085">18:05</option><option value="1090">18:10</option><option value="1095">18:15</option><option value="1100">18:20</option><option value="1105">18:25</option><option value="1110">18:30</option><option value="1115">18:35</option><option value="1120">18:40</option><option value="1125">18:45</option><option value="1130">18:50</option><option value="1135">18:55</option><option value="1140">19:00</option><option value="1145">19:05</option><option value="1150">19:10</option><option value="1155">19:15</option><option value="1160">19:20</option><option value="1165">19:25</option><option value="1170">19:30</option><option value="1175">19:35</option><option value="1180">19:40</option><option value="1185">19:45</option><option value="1190">19:50</option><option value="1195">19:55</option><option value="1200">20:00</option><option value="1205">20:05</option><option value="1210">20:10</option><option value="1215">20:15</option><option value="1220">20:20</option><option value="1225">20:25</option><option value="1230">20:30</option><option value="1235">20:35</option><option value="1240">20:40</option><option value="1245">20:45</option><option value="1250">20:50</option><option value="1255">20:55</option><option value="1260">21:00</option><option value="1265">21:05</option><option value="1270">21:10</option><option value="1275">21:15</option><option value="1280">21:20</option><option value="1285">21:25</option><option value="1290">21:30</option><option value="1295">21:35</option><option value="1300">21:40</option><option value="1305">21:45</option><option value="1310">21:50</option><option value="1315">21:55</option><option value="1320">22:00</option><option value="1325">22:05</option><option value="1330">22:10</option><option value="1335">22:15</option><option value="1340">22:20</option><option value="1345">22:25</option><option value="1350">22:30</option><option value="1355">22:35</option><option value="1360">22:40</option><option value="1365">22:45</option><option value="1370">22:50</option><option value="1375">22:55</option><option value="1380">23:00</option><option value="1385">23:05</option><option value="1390">23:10</option><option value="1395">23:15</option><option value="1400">23:20</option><option value="1405">23:25</option><option value="1410">23:30</option><option value="1415">23:35</option><option value="1420">23:40</option><option value="1425">23:45</option><option value="1430">23:50</option><option value="1435">23:55</option>
-                </select>
-                <select class="time_selects end_day">
-                    <option value="1">1</option><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option><option value="6">6</option><option value="7">7</option><option value="8">8</option><option value="9">9</option><option value="10">10</option><option value="11">11</option><option value="12">12</option><option value="13">13</option><option value="14">14</option><option value="15">15</option><option value="16">16</option><option value="17">17</option><option value="18">18</option><option value="19">19</option><option value="20">20</option><option value="21">21</option><option value="22">22</option><option value="23">23</option><option value="24">24</option><option value="25">25</option><option value="26">26</option><option value="27">27</option><option value="28">28</option><option value="29">29</option><option value="30">30</option><option value="31">31</option>
-                </select>
-                <select class="time_selects end_month">
-                    <option value="0">January</option><option value="1">February</option><option value="2">March</option><option value="3">April</option><option value="4">May</option><option value="5">June</option><option value="6">July</option><option value="7">August</option><option value="8">September</option><option value="9">October</option><option value="10">November</option><option value="11">December</option>
-                </select>
-                <select class="time_selects end_year">
-                    <option value="2010">2010</option><option value="2011">2011</option><option value="2012">2012</option><option value="2013">2013</option><option value="2014">2014</option><option value="2015">2015</option><option value="2016">2016</option><option value="2017">2017</option><option value="2018">2018</option><option value="2019">2019</option>
-                </select>
-            </div>
-        </div>
-
-        <div id='calendar_repeat_root' class="calendar_repeat_root">
-             <div class="repeat_title">Repeat Event:<div class="buttons_root repeat_button">Enable</div></div>
-             <div class="repeat_display" style="display:none">
-
-                <div class="repeater">
-                    <input class="repeat_radio repeat_radio_daily" name="repeat" value="day" type="radio">Daily<br>
-                    <input class="repeat_radio repeat_radio_weekly" name="repeat" value="week" type="radio">Weekly<br>
-                    <input class="repeat_radio repeat_radio_monthly" name="repeat" value="month" type="radio">Monthly<br>
-                    <input class="repeat_radio repeat_radio_yearly" name="repeat" value="year" type="radio">Yearly
-                </div>
-
-                <div style="display: block" class="repeat_every_day">
-                    <div class="repeat_every_day_text repeat_every_day_first">
-                        <input name="repeat_every_day_radio" class="repeat_every_day_radio repeat_every_day_radio_day" type="radio">
-                        Every
-                        <input class="repeat_every_day_input" type="number">
-                        day
-                    </div>
-
-                    <div class="repeat_every_day_text repeat_every_day_workday">
-                        <input name="repeat_every_day_radio" class="repeat_every_day_radio repeat_every_day_radio_workday" type="radio">
-                        Every workday
-                    </div>
-                </div>
-
-                <div style="display: none" class="repeat_every_week" >
-                    <div class="repeat_every_week_first">
-                        &nbsp;&nbsp;Repeat every
-                        <input class="repeat_every_week_input" value="1" type="text">
-                        week next days:<br>
-                        &nbsp;<input class="repeat_checkbox" name="week_day" value="1" type="checkbox">Mon
-                        <input class="repeat_checkbox" name="week_day" value="2" type="checkbox">Tue
-                        <input class="repeat_checkbox" name="week_day" value="3" type="checkbox">Wed
-                        <input class="repeat_checkbox" name="week_day" value="4" type="checkbox">Thu
-                        <input class="repeat_checkbox" name="week_day" value="5" type="checkbox">Fri
-                        <input class="repeat_checkbox" name="week_day" value="6" type="checkbox">Sat
-                        <input class="repeat_checkbox" name="week_day" value="7" type="checkbox">Sun
-                    </div>
-                </div>
-
-                <div style="display: none;" class="repeat_every_month">
-                    <input class="repeat_radio_month" name="month_type" value="d" type="radio">Repeat
-                    <input class="repeat_text" name="month_day" value="1" type="text">day every
-                    <input class="repeat_text" name="month_count" value="1" type="text">month<br>
-                    <input class="repeat_radio_month" name="month_type" checked="" value="w" type="radio">On
-                    <input class="repeat_text" name="month_week2" value="1" type="text">
-                    <select name="month_day2">
-                        <option value="1">Monday</option>
-                        <option value="2">Tuesday</option>
-                        <option value="3">Wednesday</option>
-                        <option value="4">Thursday</option>
-                        <option value="5">Friday</option>
-                        <option value="6">Saturday</option>
-                        <option value="0">Sunday</option>
-                    </select>
-                    every
-                    <input class="repeat_text" name="month_count2" value="1" type="text">
-                    month<br>
-                </div>
-
-                <div style="display: none;" class="repeat_every_year">
-                    <input class="repeat_radio_year" name="year_type" value="d" type="radio">
-                    Every
-                    <input class="repeat_text" name="year_day" value="1" type="text">
-                    day
-                    <select name="year_month">
-                        <option value="0" selected="">January</option>
-                        <option value="1">February</option>
-                        <option value="2">March</option>
-                        <option value="3">April</option>
-                        <option value="4">May</option>
-                        <option value="5">June</option>
-                        <option value="6">July</option>
-                        <option value="7">August</option>
-                        <option value="8">September</option>
-                        <option value="9">October</option>
-                        <option value="10">November</option>
-                        <option value="11">December</option>
-                    </select>
-                    month<br>
-                    <input class="repeat_radio_year" name="year_type" checked="" value="w" type="radio">
-                    On
-                    <input class="repeat_text" name="year_week2" value="1" type="text">
-                    <select name="year_day2">
-                        <option value="1" selected="">Monday</option>
-                        <option value="2">Tuesday</option>
-                        <option value="3">Wednesday</option>
-                        <option value="4">Thursday</option>
-                        <option value="5">Friday</option>
-                        <option value="6">Saturday</option>
-                        <option value="7">Sunday</option>
-                    </select>
-                    of
-                    <select name="year_month2">
-                        <option value="0" selected="">January</option>
-                        <option value="1">February</option>
-                        <option value="2">March</option>
-                        <option value="3">April</option>
-                        <option value="4">May</option>
-                        <option value="5">June</option>
-                        <option value="6">July</option>
-                        <option value="7">August</option>
-                        <option value="8">September</option>
-                        <option value="9">October</option>
-                        <option value="10">November</option>
-                        <option value="11">December</option>
-                    </select>
-                    <br>
-                </div>
-
-                <div style="display: block;" class="repeat_end" >
-                    <input class="repeat_radio_end" name="end" checked="" type="radio">No end date<br>
-                    <input class="repeat_radio_end" name="end" type="radio">After
-                    <input class="repeat_text" name="occurences_count" value="1" type="text">occurrences<br>
-                    <input class="repeat_radio_end" name="end" type="radio">End by
-                    <input class="repeat_date" name="date_of_end" value="undefined" type="text"><br>
-                </div>
-            </div>
-        </div>
-
-        <div id='calendar_buttons' class="calendar_buttons">
-            <div class="buttons_root save_button">Save</div>
-            <div class="buttons_root cancel_button">Cancel</div>
-            <div class="buttons_root delete_button">Delete</div>
-        </div>
-
-        <div class="calendar_objects_root">
-            <div class="objects_text objects_object">
-                <input class="objects_input_root objects_input_object">Object:<div class="button" style="border: 1px solid red">Show Objects</div>
-            </div>
-            <div class="objects_text objects_temperature">Temperature:
-                <select class="objects_input_root objects_input_temperature">
-                    <option value="14">14</option><option value="14.5">14.5</option>
-                    <option value="15">15</option><option value="15.5">15.5</option>
-                    <option value="16">16</option><option value="16.5">16.5</option>
-                    <option value="17">17</option><option value="17.5">17.5</option>
-                    <option value="18">18</option><option value="18.5">18.5</option>
-                    <option value="19">19</option><option value="19.5">19.5</option>
-                    <option value="20">20</option><option value="20.5">20.5</option>
-                    <option value="21">21</option><option value="21.5">21.5</option>
-                    <option value="22">22</option><option value="22.5">22.5</option>
-                    <option value="23">23</option><option value="23.5">23.5</option>
-                    <option value="24">24</option><option value="24.5">24.5</option>
-                    <option value="25">25</option><option value="25.5">25.5</option>
-                    <option value="26">26</option>
-                </select><span style="alignment: right">°C</span>
-                <!--<input class="objects_input_root objects_input_temperature">-->
-            </div>
-            <div class="objects_text objects_switch">Switch:
-                <input type=checkbox class="objects_input_root objects_input_switch">
-            </div>
-            <div class="objects_text objects_script">Script:
-                <input class="objects_input_root objects_input_script">
-            </div>
-        </div>
-
-        <div class="calendar_tips_root">
-            <div class="tip_root">Tip:</div>
-            <div class="tips">Lorem Ipsum</div>
+        <div style="position:absolute;left:14px;top:64px;width:36px;height:16px;z-index:2;text-align:left;">
+            <span>Every</span>
         </div>
     </div>
+    <div style="height:297px;overflow:auto;padding:0;" id="repeaterTab-page-1">
+        <input type="text" id="weeklyinput" style="position:absolute;left:65px;top:64px;width:30px;line-height:18px;z-index:0;" name="input_weekly" value="1" maxlength="3">
+        <div style="position:absolute;left:110px;top:64px;width:100%;height:16px;z-index:1;text-align:left;">
+           <span>week on:</span>
+        </div>
+        <div style="position:absolute;left:14px;top:64px;width:36px;height:16px;z-index:2;text-align:left;">
+            <span>Every</span>
+        </div>
+        <div id="monthButtons" style="position:absolute;left:15px;top:100px;height:28px;z-index:12;">
+            <input type="checkbox" id="jqbmonday" name="button_weekly" value="Mon"><label style="width:120px;height:100%;" for="jqbmonday">Monday</label>
+        </div>
+        <div id="monthButtons" style="position:absolute;left:155px;top:100px;height:28px;z-index:11;">
+            <input type="checkbox" id="jqbtuesday" name="button_weekly" value="Tue"><label style="width:120px;height:100%;" for="jqbtuesday">Tuesday</label>
+        </div>
+        <div id="monthButtons" style="position:absolute;left:15px;top:140px;height:28px;z-index:10;">
+            <input type="checkbox" id="jqbwednesday" name="button_weekly" value="Wed"><label style="width:120px;height:100%;" for="jqbwednesday">Wednesday</label>
+        </div>
+        <div id="monthButtons" style="position:absolute;left:155px;top:140px;height:28px;z-index:6;">
+            <input type="checkbox" id="jqbthursday" name="button_weekly" value="Thu"><label style="width:120px;height:100%;" for="jqbthursday">Thursday</label>
+        </div>
+        <div id="monthButtons" style="position:absolute;left:15px;top:180px;height:28px;z-index:7;">
+            <input type="checkbox" id="jqbfriday" name="button_weekly" value="Fri"><label style="width:120px;height:100%;" for="jqbfriday">Friday</label>
+        </div>
+        <div id="monthButtons" style="position:absolute;left:155px;top:180px;height:28px;z-index:8;">
+            <input type="checkbox" id="jqbsaturday" name="button_weekly" value="Sat"><label style="width:120px;height:100%;" for="jqbsaturday">Saturday</label>
+        </div>
+        <div id="monthButtons" style="position:absolute;left:15px;top:220px;height:28px;z-index:9;">
+            <input type="checkbox" id="jqbsunday" name="button_weekly" value="Sun"><label style="width:120px;height:100%;" for="jqbsunday">Sunday</label>
+        </div>
+    </div>
+
+    <div style="height:297px;overflow:auto;padding:0;" id="repeaterTab-page-2">
+        <div style="position:absolute;left:14px;top:64px;width:36px;height:16px;z-index:2;text-align:left;">
+            <span>Every</span>
+        </div>
+        <input type="text" id="monthlyinput" style="position:absolute;left:65px;top:64px;width:30px;line-height:18px;z-index:0;" name="input_monthly" value="1" maxlength="3">
+
+        <input type="radio" id="monthlygroup1" name="group_each" value="on" style="position:absolute;left:12px;top:101px;z-index:13;">
+        <div style="position:absolute;left:35px;top:100px;width:137px;height:16px;z-index:21;text-align:left;">
+            <span>On Each</span></div>
+        <div style="position:absolute;left:36px;top:307px;width:137px;height:16px;z-index:25;text-align:left;">
+            <span>On the</span></div>
+            <select name="each_first" size="1" id="monthlycombofirst" style="position:absolute;left:110px;top:305px;width:60px;z-index:26;">
+            <option value="1">1st</option>
+            <option value="2">2nd</option>
+            <option value="3">3rd</option>
+            <option value="4">4th</option>
+            <option value="5">last</option>
+            </select>
+            <select name="each_day" size="1" id="monthlycombosecond" style="position:absolute;left:180px;top:305px;width:150px;z-index:27;">
+            <option value="1">Monday</option>
+            <option value="2">Tuesday</option>
+            <option value="3">Wednesday</option>
+            <option value="4">Thursday</option>
+            <option value="5">Friday</option>
+            <option value="6">Saturday</option>
+            <option value="7">Sunday</option>
+            </select>
+            <input type="radio" id="monthlygroup2" name="group_each" value="on" style="position:absolute;left:12px;top:308px;z-index:28;">
+        <div style="position:absolute;left:110px;top:64px;width:36px;height:16px;z-index:1;text-align:left;  ">
+            <span>month:</span></div>
+        <div id="monthButtons" style="position:absolute;left:11px;top:133px;width:28px;height:28px;z-index:14;">
+            <input type="checkbox" id="jqb1" name="button_monthly" value="1"><label style="width:100%;height:100%;" for="jqb1">1</label>
+        </div>
+        <div id="monthButtons" style="position:absolute;left:44px;top:133px;width:28px;height:28px;z-index:16;">
+            <input type="checkbox" id="jqb2" name="button_monthly" value="2"><label style="width:100%;height:100%;" for="jqb2">2</label></div>
+        <div id="monthButtons" style="position:absolute;left:77px;top:133px;width:28px;height:28px;z-index:18;">
+            <input type="checkbox" id="jqb3" name="button_monthly" value="3"><label style="width:100%;height:100%;" for="jqb3">3</label></div>
+        <div id="monthButtons" style="position:absolute;left:110px;top:133px;width:28px;height:28px;z-index:20;">
+            <input type="checkbox" id="jqb4" name="button_monthly" value="4"><label style="width:100%;height:100%;" for="jqb4">4</label></div>
+        <div id="monthButtons" style="position:absolute;left:143px;top:133px;width:28px;height:28px;z-index:22;">
+            <input type="checkbox" id="jqb5" name="button_monthly" value="5"><label style="width:100%;height:100%;" for="jqb5">5</label></div>
+        <div id="monthButtons" style="position:absolute;left:176px;top:133px;width:28px;height:28px;z-index:23;">
+            <input type="checkbox" id="jqb6" name="button_monthly" value="6"><label style="width:100%;height:100%;" for="jqb6">6</label></div>
+        <div id="monthButtons" style="position:absolute;left:209px;top:133px;width:28px;height:28px;z-index:24;">
+            <input type="checkbox" id="jqb7" name="button_monthly" value="7"><label style="width:100%;height:100%;" for="jqb7">7</label></div>
+        <div id="monthButtons" style="position:absolute;left:11px;top:165px;width:28px;height:28px;z-index:29;">
+            <input type="checkbox" id="jqb8" name="button_monthly" value="8"><label style="width:100%;height:100%;" for="jqb8">8</label></div>
+        <div id="monthButtons" style="position:absolute;left:44px;top:165px;width:28px;height:28px;z-index:30;">
+            <input type="checkbox" id="jqb9" name="button_monthly" value="9"><label style="width:100%;height:100%;" for="jqb9">9</label></div>
+        <div id="monthButtons" style="position:absolute;left:77px;top:165px;width:28px;height:28px;z-index:31;">
+            <input type="checkbox" id="jqb10" name="button_monthly" value="10"><label style="width:100%;height:100%;" for="jqb10">10</label></div>
+        <div id="monthButtons" style="position:absolute;left:110px;top:165px;width:28px;height:28px;z-index:32;">
+        <input type="checkbox" id="jqb11" name="button_monthly" value="11"><label style="width:100%;height:100%;" for="jqb11">11</label></div>
+        <div id="monthButtons" style="position:absolute;left:143px;top:165px;width:28px;height:28px;z-index:33;">
+        <input type="checkbox" id="jqb12" name="button_monthly" value="12"><label style="width:100%;height:100%;" for="jqb12">12</label></div>
+        <div id="monthButtons" style="position:absolute;left:175px;top:165px;width:28px;height:28px;z-index:34;">
+        <input type="checkbox" id="jqb13" name="button_monthly" value="13"><label style="width:100%;height:100%;" for="jqb13">13</label></div>
+        <div id="monthButtons" style="position:absolute;left:209px;top:165px;width:28px;height:28px;z-index:35;">
+        <input type="checkbox" id="jqb14" name="button_monthly" value="14"><label style="width:100%;height:100%;" for="jqb14">14</label></div>
+        <div id="monthButtons" style="position:absolute;left:11px;top:198px;width:28px;height:28px;z-index:42;">
+        <input type="checkbox" id="jqb15" name="button_monthly" value="15"><label style="width:100%;height:100%;" for="jqb15">15</label></div>
+        <div id="monthButtons" style="position:absolute;left:44px;top:198px;width:28px;height:28px;z-index:36;">
+        <input type="checkbox" id="jqb16" name="button_monthly" value="16"><label style="width:100%;height:100%;" for="jqb16">16</label></div>
+        <div id="monthButtons" style="position:absolute;left:77px;top:198px;width:28px;height:28px;z-index:37;">
+        <input type="checkbox" id="jqb17" name="button_monthly" value="17"><label style="width:100%;height:100%;" for="jqb17">17</label></div>
+        <div id="monthButtons" style="position:absolute;left:110px;top:198px;width:28px;height:28px;z-index:38;">
+        <input type="checkbox" id="jqb18" name="button_monthly" value="18"><label style="width:100%;height:100%;" for="jqb18">18</label></div>
+        <div id="monthButtons" style="position:absolute;left:143px;top:198px;width:28px;height:28px;z-index:39;">
+        <input type="checkbox" id="jqb19" name="button_monthly" value="19"><label style="width:100%;height:100%;" for="jqb19">19</label></div>
+        <div id="monthButtons" style="position:absolute;left:176px;top:198px;width:28px;height:28px;z-index:40;">
+        <input type="checkbox" id="jqb20" name="button_monthly" value="20"><label style="width:100%;height:100%;" for="jqb20">20</label></div>
+        <div id="monthButtons" style="position:absolute;left:209px;top:198px;width:28px;height:28px;z-index:41;">
+        <input type="checkbox" id="jqb21" name="button_monthly" value="21"><label style="width:100%;height:100%;" for="jqb21">21</label></div>
+        <div id="monthButtons" style="position:absolute;left:11px;top:231px;width:28px;height:28px;z-index:49;">
+        <input type="checkbox" id="jqb22" name="button_monthly" value="22"><label style="width:100%;height:100%;" for="jqb22">22</label></div>
+        <div id="monthButtons" style="position:absolute;left:44px;top:231px;width:28px;height:28px;z-index:48;">
+        <input type="checkbox" id="jqb23" name="button_monthly" value="23"><label style="width:100%;height:100%;" for="jqb23">23</label></div>
+        <div id="monthButtons" style="position:absolute;left:77px;top:231px;width:28px;height:28px;z-index:47;">
+        <input type="checkbox" id="jqb24" name="button_monthly" value="24"><label style="width:100%;height:100%;" for="jqb24">24</label></div>
+        <div id="monthButtons" style="position:absolute;left:110px;top:231px;width:28px;height:28px;z-index:43;">
+        <input type="checkbox" id="jqb25" name="button_monthly" value="25"><label style="width:100%;height:100%;" for="jqb25">25</label></div>
+        <div id="monthButtons" style="position:absolute;left:143px;top:231px;width:28px;height:28px;z-index:44;">
+        <input type="checkbox" id="jqb26" name="button_monthly" value="26"><label style="width:100%;height:100%;" for="jqb26">26</label></div>
+        <div id="monthButtons" style="position:absolute;left:176px;top:231px;width:28px;height:28px;z-index:45;">
+        <input type="checkbox" id="jqb27" name="button_monthly" value="27"><label style="width:100%;height:100%;" for="jqb27">27</label></div>
+        <div id="monthButtons" style="position:absolute;left:209px;top:231px;width:28px;height:28px;z-index:46;">
+        <input type="checkbox" id="jqb28" name="button_monthly" value="28"><label style="width:100%;height:100%;" for="jqb28">28</label></div>
+        <div id="monthButtons" style="position:absolute;left:11px;top:264px;width:28px;height:28px;z-index:52;">
+        <input type="checkbox" id="jqb29" name="button_monthly" value="29"><label style="width:100%;height:100%;" for="jqb29">29</label></div>
+        <div id="monthButtons" style="position:absolute;left:44px;top:264px;width:28px;height:28px;z-index:51;">
+        <input type="checkbox" id="jqb30" name="button_monthly" value="30"><label style="width:100%;height:100%;" for="jqb30">30</label></div>
+        <div id="monthButtons" style="position:absolute;left:77px;top:264px;width:28px;height:28px;z-index:50;">
+        <input type="checkbox" id="jqb31" name="button_monthly" value="31"><label style="width:100%;height:100%;" for="jqb31">31</label></div>
+    </div>
+
+    <div style="height:297px;overflow:auto;padding:0;" id="repeaterTab-page-3">
+    <input type="text" id="yearlyinput" style="position:absolute;left:65px;top:64px;width:30px;line-height:18px;z-index:0;" name="input_yearly" value="1" maxlength="3">
+    <div style="position:absolute;left:110px;top:64px;width:100%;height:16px;z-index:1;text-align:left;">
+    <span>year:</span></div>
+
+    <input id="yearlygroup1" type="radio" style="position:absolute;left:12px;top:101px;z-index:13;" value="on" name="group_each"></input>
+    <div style="position:absolute;left:35px;top:100px;width:137px;height:16px;z-index:21;text-align:left;">
+        <span>On Each</span>
+    </div>
+
+    <div style="position:absolute;left:14px;top:64px;width:36px;height:16px;z-index:2;text-align:left;">
+    <span>Every</span></div>
+    <div id="monthButtons" style="left:11px;top:133px;z-index:59;">
+        <input type="checkbox" id="jqbjan" name="button_yearly" value="Jan"><label style="width:100%;height:100%;" for="jqbjan">Jan</label></div>
+    <div id="monthButtons" style="left:75px;top:133px;z-index:56;">
+        <input type="checkbox" id="jqbfeb" name="button_yearly" value="Feb"><label style="width:100%;height:100%;" for="jqbfeb">Feb</label></div>
+    <div id="monthButtons" style="left:138px;top:133px;z-index:57;">
+        <input type="checkbox" id="jqbmar" name="button_yearly" value="Mar"><label style="width:100%;height:100%;" for="jqbmar">Mar</label></div>
+    <div id="monthButtons" style="left:202px;top:133px;z-index:58;">
+        <input type="checkbox" id="jqbapr" name="button_yearly" value="Apr"><label style="width:100%;height:100%;" for="jqbapr">Apr</label></div>
+    <div id="monthButtons" style="left:11px;top:173px;z-index:63;">
+        <input type="checkbox" id="jqbmay" name="button_yearly" value="May"><label style="width:100%;height:100%;" for="jqbmay">May</label></div>
+    <div id="monthButtons" style="left:75px;top:173px;z-index:60;">
+        <input type="checkbox" id="jqbjun" name="button_yearly" value="Jun"><label style="width:100%;height:100%;" for="jqbjun">Jun</label></div>
+    <div id="monthButtons" style="left:138px;top:173px;z-index:61;">
+        <input type="checkbox" id="jqbjul" name="button_yearly" value="Jul"><label style="width:100%;height:100%;" for="jqbjul">Jul</label></div>
+    <div id="monthButtons" style="left:202px;top:173px;z-index:62;">
+    <input type="checkbox" id="jqbaug" name="button_yearly" value="Aug"><label style="width:100%;height:100%;" for="jqbaug">Aug</label></div>
+    <div id="monthButtons" style="left:11px;top:213px;z-index:67;">
+        <input type="checkbox" id="jqbsep" name="button_yearly" value="Sep"><label style="width:100%;height:100%;" for="jqbsep">Sep</label></div>
+    <div id="monthButtons" style="left:75px;top:213px;z-index:64;">
+        <input type="checkbox" id="jqboct" name="button_yearly" value="Oct"><label style="width:100%;height:100%;" for="jqboct">Oct</label></div>
+    <div id="monthButtons" style="left:139px;top:213px;z-index:65;">
+        <input type="checkbox" id="jqbnov" name="button_yearly" value="Nov"><label style="width:100%;height:100%;" for="jqbnov">Nov</label></div>
+    <div id="monthButtons" style="left:202px;top:213px;z-index:66;">
+        <input type="checkbox" id="jqbdec" name="button_yearly" value="Dec"><label style="width:100%;height:100%;" for="jqbdec">Dec</label></div>
+    <input type="radio" id="yearlygroup2" name="group_each" value="on" style="position:absolute;left:12px;top:308px;z-index:28;">
+    <div style="position:absolute;left:36px;top:307px;width:137px;height:16px;z-index:25;text-align:left;">
+    <span>On the</span></div>
+    <select name="each_first" size="1" id="yearlycombofirst" style="position:absolute;left:110px;top:305px;width:60px;z-index:26;">
+    <option value="1">1st</option>
+    <option value="2">2nd</option>
+    <option value="3">3rd</option>
+    <option value="4">4th</option>
+    <option value="5">last</option>
+    </select>
+    <select name="each_day" size="1" id="yearlycombosecond" style="position:absolute;left:180px;top:305px;width:150px;z-index:27;">
+    <option value="1">Monday</option>
+    <option value="2">Tuesday</option>
+    <option value="3">Wednesday</option>
+    <option value="4">Thursday</option>
+    <option value="5">Friday</option>
+    <option value="6">Saturday</option>
+    <option value="7">Sunday</option>
+    </select>
+    </div>
+</div>
+
+    <hr id="Line4" style="position:absolute;left:16px;top:197px;width:317px;height:1px;z-index:93;">
+    <div id="wb_jQuerySpinner1" style="position:absolute;left:104px;top:161px;width:77px;height:26px;z-index:94; display: none;">
+        <input type="text" id="jQuerySpinner1" style="width:48px;" name="jQuerySpinner1" value="20">
+    </div>
+    <input type="text" id="Editbox10" style="position:absolute;left:104px;top:164px;width:153px;line-height:19px;z-index:95;display: none;" name="input_location" value="...">
+    <input type="button" id="button_script" name="button_script" value="Select" style="position:absolute; left:240px;top:157px;z-index:96;">
+    <input type="checkbox" id="Checkbox2" name="" value="on" style="position:absolute;left:92px;top:165px;z-index:97;">
+
+    <div style="position:absolute;left:16px;top:165px;width:80px;height:16px;text-align:right;z-index:98; display: none;">
+        <span>Temperature:</span>
+    </div>
+    <div style="position:absolute;left:16px;top:164px;width:80px;height:16px;text-align:left;z-index:99; display: block;">
+        <span>Script:</span>
+    </div>
+    <div style="position:absolute;left:16px;top:164px;width:80px;height:16px;text-align:right;z-index:100; display: none;">
+        <span>Switch:</span>
+    </div>
+
+    <input type="text" style="display: none; position:absolute;left:173px;top:337px;width:29px;z-index:101;" name="input_times" value="1">
+    <div style="display: none; position:absolute;left:213px;top:341px;width:46px;height:16px;z-index:102;text-align:left;">
+        <span>time(s)</span>
+    </div>
+    <!--<div id="wb_Line5" style="position:absolute;left:336px;top:12px;width:0px;height:360px;z-index:103;">
+        <img src="images/img0001.png" id="Line5" alt="">
+    </div>-->
+    <textarea name="TextArea1" id="input_notes" style="position:absolute;left:16px;top:105px;width:309px;height:46px;z-index:104;" rows="1" cols="48">Set some descriptive Notes...</textarea>
+    <div style="position:absolute;left:16px;top:86px;width:248px;height:16px;z-index:105;text-align:left;">
+        <span>Description</span>
+    </div>
+    <hr id="Line2" style="position:absolute;left:16px;top:385px;width:603px;height:1px;z-index:106;">
+
+    <!-- Buttons -->
+    <input type="button" id="button_save" name="button_save" value="Save" style="position:absolute;left:17px;top:397px;z-index:107;">
+    <input type="button" id="button_cancel" name="button_cancel" value="Cancel" style="position:absolute;left:100px;top:397px;z-index:108;">
+    <input type="button" id="button_delete" name="button_delete" value="Delete" style="position:absolute;right:5px;top:397px;z-index:109;">
+    <!-- Buttons -->
+</div>
+<div id="dialog-select-member" style="display:none"></div>
 </body>
 </html>
