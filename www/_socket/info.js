@@ -1,1 +1,1 @@
-var socketUrl = ":8084"; var socketSession = ""; sysLang="en";
+var socketUrl = "192.168.1.190:8082"; var socketSession = ""; sysLang="en";

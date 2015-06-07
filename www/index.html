@@ -5,32 +5,93 @@
     <link href="lib/cupertino/jquery-ui.min.css" rel="stylesheet" type="text/css">
     <link type="text/css" rel="stylesheet" href="lib/css/themes/jquery-ui/redmond/jquery-ui.min.css">
     <link type="text/css" rel="stylesheet" href="lib/css/fancytree/ui.fancytree.min.css"/>
-    <link href='fullcalendar.min.css' rel='stylesheet' />
+    <link href='fullcalendar.css' rel='stylesheet' />
     <link href='occ.css' rel='stylesheet' />
     <link href="lib/css/tinycolorpicker.css" rel="stylesheet" type="text/css" media="screen"/>
+    <link href="lib/css/jquery.multiselect.css" rel="stylesheet" type="text/css"/>
+    <link href="lib/css/jquery.multiselect.filter.css" rel="stylesheet" type="text/css"/>
 
     <script type="text/javascript" src="lib/js/jquery-1.11.1.min.js"></script>
     <script type="text/javascript" src="lib/js/jquery-ui-1.10.3.full.min.js"></script>
     <script type="text/javascript" src="lib/js/jquery.fancytree-all.min.js"></script>
+
+    <script type="text/javascript" src="lib/js/jquery.multiselect.js"></script>
+    <script type="text/javascript" src="lib/js/jquery.multiselect.filter.js"></script>
+
     <script type="text/javascript" src="lib/js/translate.js"></script>
     <script type="text/javascript" src="lib/js/selectID.js"></script>
     <script type="text/javascript" src="lib/js/socket.io.js"></script>
     <script type="text/javascript" src='lib/moment.min.js'></script>
 
-    <script type="text/javascript" src='fullcalendar.min.js'></script>
+    <script type="text/javascript" src='fullcalendar.js'></script>
     <script type="text/javascript" src='gcal.js'></script>
 
-    <script type="text/javascript" src='occ.js'></script>
     <script type="text/javascript" src="lib/js/jquery.tinycolorpicker.min.js"></script>
 
-    <script type="text/javascript" src="/_socket/info.js"></script>
+    <script type="text/javascript" src="_socket/info.js"></script>
     <script type="text/javascript" src="conn.js"></script>
+    <script type="text/javascript" src='occ.js'></script>
+
+    <style>
+        #progressbar {
+            margin-top: 20px;
+        }
+
+        .progress-label {
+            font-weight: bold;
+            text-shadow: 1px 1px 0 #fff;
+        }
+
+        .ui-dialog-titlebar-close {
+            display: none;
+        }
+
+        #links { float: left; width: 130px; }
+        #mitte { margin: 0 130px;}
+    </style>
+
+    <script>
+        $(function() {
+            $("#temp_spinner").spinner({
+                step: 0.5,
+                numberFormat: "n"
+            });
+        });
+    </script>
 </head>
-<body>
 
-<div id='calendar' style="display: block;"></div>
+<div id="dialog" title="Socket.IO Progress">
+    <div class="progress-label">Starting Connection...</div>
+    <div id="progressbar"></div>
+</div>
 
-<div id="event_Dialog" title="Create a new Event" style="display: none;">
+<div id="dialog-form" title="Select Options from Enums">
+    <form>
+        <div id='selectMultiple' style="display: none">
+            <p>
+                <select multiple="multiple" id="allelements" name="allelements" style="width:370px">
+                </select>
+            </p>
+        </div>
+
+        <div id='selectSingle' style="display: none">
+            <p>
+                <select multiple="multiple" id="allelement" name="allelement" style="width:370px">
+                </select>
+            </p>
+        </div>
+        <!-- Allow form submission with keyboard without duplicating the dialog button -->
+        <input type="submit" tabindex="-1" style="position:absolute; top:-1000px">
+    </form>
+</div>
+
+<div id="links"><button id="select_options">Select Options</button></div>
+<div id="mitte"><div id='calendar'></div></div>
+
+<input type="text" id="IDID" value="0" style="display:none">
+<input type="text" id="IDPARENT" value="0" style="display:none">
+<input type="text" id="IDTYPE" value="0" style="display:block">
+<div id="event_Dialog" title="Create a new Event" style="display: none; overflow: hidden">
     <input type="text" id="eventID" value="0" style="display:none">
     <input type="text" id="input_title" style="position:absolute;left:16px;top:10px;width:209px;line-height:19px;z-index:72;" name="input_event" value="Set Name...">
 
@@ -41,7 +102,7 @@
         <input type="hidden" class="colorInput"/>
     </div>
 
-    <input type="text" id="input_location" style="position:absolute;left:16px;top:45px;width:210px;line-height:19px;z-index:73;" name="input_location" value="Select Object...">
+    <input type="text" id="input_location" style="position:absolute;left:16px;top:45px;width:210px;line-height:19px;z-index:73;" name="input_location" readonly value="Select Object...">
     <input type="button" id="button_location" name="button_location" value="Select" style="position:absolute;left:240px;top:37px;z-index:92;">
 
     <input type="checkbox" id="checkbox_allday" name="checkbox_allday" value="on" style="position:absolute;left:92px;top:204px;z-index:74;" onchange="hideFromTo(this.checked)">
@@ -76,12 +137,12 @@
         <span>repeat:</span>
     </div>
     <select name="repeaterCombo" size="1" id="repeaterCombo" style="position:absolute;left:94px;top:305px;width:194px;z-index:85;">
-        <option selected value="None" onclick="$('#repeaterTab').hide();$('#event_Dialog').dialog( 'option', 'width', 345 );return true;">None</option>
-        <option value="day" onclick="$('#repeaterTab').hide();$('#event_Dialog').dialog( 'option', 'width', 345 );return true;">Every Day</option>
-        <option value="week" onclick="$('#repeaterTab').hide();$('#event_Dialog').dialog( 'option', 'width', 345 );return true;">Every Week</option>
-        <option value="month" onclick="$('#repeaterTab').hide();$('#event_Dialog').dialog( 'option', 'width', 345 );return true;">Every Month</option>
-        <option value="year" onclick="$('#repeaterTab').hide();$('#event_Dialog').dialog( 'option', 'width', 345 );return true;">Every Year</option>
-        <option value="custom" onclick="$('#repeaterTab').show();$('#event_Dialog').dialog( 'option', 'width', 690 );return true;">Custom...</option>
+        <option selected value="none" onclick="showHideRepeater('none');">None</option>
+        <option value="day" onclick="showHideRepeater('day');">Every Day</option>
+        <option value="week" onclick="showHideRepeater('week');">Every Week</option>
+        <option value="month" onclick="showHideRepeater('month');">Every Month</option>
+        <option value="year" onclick="showHideRepeater('year');">Every Year</option>
+        <option value="custom" onclick="showHideRepeater('custom');">Custom...</option>
     </select>
     <!-- Repeater -->
 
@@ -89,12 +150,13 @@
         <span>end:</span>
     </div>
     <select name="endCombo" size="1" id="endCombo" style="position:absolute;left:94px;top:337px;width:100px;z-index:87;">
-        <option selected value="never" onclick="$('#jqdEnd').attr('disabled', true)">Never</option>
-        <option value="times" onclick="$('#jqdEnd').attr('disabled', false)">After a number of Times</option>
-        <option value="date" onclick="$('#jqdEnd').attr('disabled', false)">On Date</option>
+        <option selected value="never" onclick="showHideEndCombo('never');">Never</option>
+        <option value="times" onclick="showHideEndCombo('times');">After a number of Times</option>
+        <option value="date" onclick="showHideEndCombo('date');">On Date</option>
     </select>
 
     <input type="text" id="jqdEnd" disabled=true style="disabled:true;position:absolute;left:203px;top:337px;width:114px;z-index:88;" name="input_end" value="03/16/2015">
+    <input type="text" id="numberoftimes" disabled=true style="disabled:true;position:absolute;left:203px;top:337px;width:114px;z-index:88;" name="numberoftimes" value="0">
     <hr id="Line1" style="position:absolute;left:16px;top:288px;width:317px;height:1px;z-index:89;">
     <hr id="Line3" style="position:absolute;left:16px;top:81px;width:317px;height:1px;z-index:90;">
     <div id="repeaterTab" style="display: none; position:absolute;left:346px;top:10px;z-index:91;width:330px;">
@@ -302,26 +364,35 @@
         <input type="text" id="jQuerySpinner1" style="width:48px;" name="jQuerySpinner1" value="20">
     </div>
     <input type="text" id="Editbox10" style="position:absolute;left:104px;top:164px;width:153px;line-height:19px;z-index:95;display: none;" name="input_location" value="...">
-    <input type="button" id="button_script" name="button_script" value="Select" style="position:absolute; left:240px;top:157px;z-index:96;">
-    <input type="checkbox" id="Checkbox2" name="" value="on" style="position:absolute;left:92px;top:165px;z-index:97;">
 
-    <div style="position:absolute;left:16px;top:165px;width:80px;height:16px;text-align:right;z-index:98; display: none;">
+    <div style="position:absolute;left:10px;top:165px;width:400px;height:16px;text-align:left;z-index:98; display: none;" id="divTemperature">
+        <input type="radio" name="setter" id="setTEMPERATURE" checked="checked">
         <span>Temperature:</span>
     </div>
+
+    <div style="position:absolute;left:130px;top:165px;width:10px;height:16px;text-align:right;z-index:98; display: none;" id="divSpinner">
+        <nobr>
+            <input id="temperature_spinner" type='number' name="temperature_spinner" value="19.0" style='width:45px'>  Celsius
+            <input type="radio" name="setter" id="setDECALCIFICATION" disabled>Decalcification
+        </nobr>
+    </div>
+
+<!-- Todo: not yet supported
+    <input type="button" id="button_script" name="button_script" value="Select" style="position:absolute; left:240px;top:157px;z-index:96;">
     <div style="position:absolute;left:16px;top:164px;width:80px;height:16px;text-align:left;z-index:99; display: block;">
         <span>Script:</span>
     </div>
-    <div style="position:absolute;left:16px;top:164px;width:80px;height:16px;text-align:right;z-index:100; display: none;">
-        <span>Switch:</span>
+-->
+
+    <div style="position:absolute;left:16px;top:165px;width:300px;height:16px;text-align:left;z-index:98; display: block;" id="divSwitch">
+        <nobr><span>Switch On/Off:</span><input type="checkbox" id="switcher" name="" value="on"></nobr>
     </div>
+
 
     <input type="text" style="display: none; position:absolute;left:173px;top:337px;width:29px;z-index:101;" name="input_times" value="1">
     <div style="display: none; position:absolute;left:213px;top:341px;width:46px;height:16px;z-index:102;text-align:left;">
         <span>time(s)</span>
     </div>
-    <!--<div id="wb_Line5" style="position:absolute;left:336px;top:12px;width:0px;height:360px;z-index:103;">
-        <img src="images/img0001.png" id="Line5" alt="">
-    </div>-->
     <textarea name="TextArea1" id="input_notes" style="position:absolute;left:16px;top:105px;width:309px;height:46px;z-index:104;" rows="1" cols="48">Set some descriptive Notes...</textarea>
     <div style="position:absolute;left:16px;top:86px;width:248px;height:16px;z-index:105;text-align:left;">
         <span>Description</span>
@@ -330,10 +401,10 @@
 
     <!-- Buttons -->
     <input type="button" id="button_save" name="button_save" value="Save" style="position:absolute;left:17px;top:397px;z-index:107;">
-    <input type="button" id="button_cancel" name="button_cancel" value="Cancel" style="position:absolute;left:100px;top:397px;z-index:108;">
+    <input type="button" id="button_submit" name="button_submit" value="Submit" style="display:none; position:absolute;left:160px;top:397px;z-index:107;">
+    <input type="button" id="button_cancel" name="button_cancel" value="Cancel" style="position:absolute;left:80px;top:397px;z-index:108;">
     <input type="button" id="button_delete" name="button_delete" value="Delete" style="position:absolute;right:5px;top:397px;z-index:109;">
     <!-- Buttons -->
 </div>
-<div id="dialog-select-member" style="display:none"></div>
 </body>
 </html>

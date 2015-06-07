@@ -1,21 +1,39 @@
 {
     "common": {
         "name":                     "occ",
-        "version":                  "0.0.18",
+        "version":                  "0.1.0",
         "title":                    "Node.js Object Control Calendar Adapter",
         "desc":                     "Javascript/Node.js based Object Control Calendar adapter",
         "platform":                 "Javascript/Node.js",
         "mode":                     "daemon",
         "icon":                     "logo.svg",
         "extIcon":                  "http://fullcalendar.io/images/logo.svg",
-        "loglevel":                 "info",
+        "loglevel":                 "debug",
 	    "localLink":		        "http://%ip%:%web_port%/occ/index.html",
         "dependencies":             ["web"],
-        "onlyWWW":                  true,
+        "onlyWWW":                  false,
         "singleton":                true
     },
     "native": {
+        "rpcListenIp": "0.0.0.0",
+        "rpcListenPort": 1600,
+        "force": false,
+        "demo": true
     },
     "objects": [
+
+    ],
+    "instanceObjects": [
+        {
+            "_id": "updated",
+            "type": "state",
+            "common": {
+                "name": "Some new devices added",
+                "type": "boolean",
+                "read":  true,
+                "write": true
+
+            }
+        }
     ]
 }

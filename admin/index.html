@@ -2,60 +2,125 @@
 
 <!-- these 4 files always have to be included -->
 <link rel="stylesheet" type="text/css" href="../../lib/css/themes/jquery-ui/redmond/jquery-ui.min.css"/>
+<link rel="stylesheet" type="text/css" href="../../lib/css/jqGrid/ui.jqgrid-4.5.4.css"/>
+<link rel="stylesheet" type="text/css" href="../../lib/css/jquery.multiselect-1.13.css"/>
 <script type="text/javascript" src="../../lib/js/jquery-1.11.1.min.js"></script>
 <script type="text/javascript" src="../../socket.io/socket.io.js"></script>
 <script type="text/javascript" src="../../lib/js/jquery-ui-1.10.3.full.min.js"></script>
-
-
-<!-- optional: use jqGrid
-<link rel="stylesheet" type="text/css" href="../../lib/css/jqGrid/ui.jqgrid-4.5.4.css"/>
 <script type="text/javascript" src="../../lib/js/jqGrid/jquery.jqGrid-4.5.4.min.js"></script>
-<script type="text/javascript" src="../../lib/js/jqGrid/i18n/grid.locale-all.js"></script>
--->
-
-<!-- optional: use multiselect
-<link rel="stylesheet" type="text/css" href="../../lib/css/jquery.multiselect-1.13.css"/>
-<script type="text/javascript" src="../../lib/js/jquery.multiselect-1.13.min.js"></script>
--->
+<script type="text/javascript" src="../../lib/js/jqGrid/grid.locale-all.js"></script>
 
 <!-- these two file always have to be included -->
 <link rel="stylesheet" type="text/css" href="../../css/adapter.css"/>
 <script type="text/javascript" src="../../js/translate.js"></script>
 <script type="text/javascript" src="../../js/adapter-settings.js"></script>
 
-
 <!-- you have to define 2 functions in the global scope: -->
 <script type="text/javascript">
+    var devices = [];
+    var rooms =   [];
 
-    // Dictionary (systemDictionary is global variable from adapter-settings.js)
     systemDictionary = {
+        "Objects Control Calendar Adapter settings": {
+            "de": "Objects Control Calendar Adapter Einstellungen",
+        },
+        "rpcListenIp_":           {"en": "RPC Listen Ip:",          "de": "RPC Listen IP:"},
+        "rpcListenPort_":         {"en": "RPC Listen Port Begin:",  "de": "RPC Listen Port Start:"},
+        "force_":                 {"en": "Force objects re-init (once):",   "de": "Initiiere Geräte neu (einmalig):"},
+        "demo_":                  {"en": "Demo Mode (save back to object disabled)", "de": "Demo Modus (Daten werden nicht zurückgeschrieben"},
+        "async_":                 {"en": "Async Save Mode", "de": "Asynchroner Modus"},
+        "help_tip":               {
+            "en": "On save the adapter restarts with new configuration immediately",
+            "de": "Beim Speichern von Einstellungen der Adapter wird sofort neu gestartet.",
+        },
     };
 
     // the function loadSettings has to exist ...
     function load(settings, onChange) {
-        // Signal to admin, that no changes yet
-        onChange(false);
+        if (!settings) return;
+
+        getIPs(function(ips) {
+            for (var i = 0; i < ips.length; i++) {
+                $('#rpcListenIp').append('<option value="' + ips[i].address + '">' + ips[i].name + '</option>');
+            }
+            $('#rpcListenIp.value').val(settings.rpcListenIp);
+        });
+
+        changed = false;
+        for (var key in settings) {
+            setValue(key, settings[key]);
+        }
     }
 
-    // ... and the function save has to exist.
-    // you have to make sure the callback is called with the settings object as first param!
-    function save(callback) {
-        // example: select elements with class=value and build settings object
+    function getSettings() {
         var obj = {};
-        callback(obj);
+        $('.value').each(function () {
+            var $this = $(this);
+            var id = $this.attr('id');
+
+            if ($this.attr('type') == 'checkbox') {
+                obj[$this.attr('id')] = $this.prop('checked');
+            } else {
+                obj[$this.attr('id')] = $this.val();
+            }
+        });
+        return obj;
+    }
+
+    function save(callback) {
+        callback(getSettings());
+        //callback(obj, {localLink: 'http://%ip%:' + obj.webServerPort});
+    }
+
+    function setValue(id, value) {
+        // example: select elements with id=key and class=value and insert value
+        if ($('#' + id + '.value').attr('type') == 'checkbox') {
+            $('#' + id + '.value').prop('checked', value).change(function() {
+                changed = true;
+                $('#save').button("enable");
+            });
+        } else {
+            $('#' + id + '.value').val(value).change(function() {
+                changed = true;
+                $('#save').button("enable");
+            }).keyup(function() {
+                // Chack that only numbers entered
+                if ($(this).hasClass('number')) {
+                    var val = $(this).val();
+                    if (val) {
+                        var newVal = '';
+                        for (var i = 0; i < val.length; i++) {
+                            if (val[i] >= '0' && val[i] <= '9') {
+                                newVal += val[i];
+                            }
+                        }
+
+                        if (val != newVal) $(this).val(newVal);
+                    }
+                }
+
+                changed = true;
+                $('#save').button("enable");
+            });
+        }
     }
 </script>
 
 <!-- you have to put your config page in a div with id adapter-container -->
 <div id="adapter-container">
+    <table><tr><td><img src="logo.svg"></td><td><h3 class="translate">Objects Control Calendar Adapter settings</h3></td></tr></table>
+    <table>
+        <p class="translate">help_tip</p>
+        <th>Homematic Communications</th>
+        <tr><td class="translate">rpcListenIp_</td><td>        <select class="value" id="rpcListenIp"></select></td></tr>
+        <tr><td class="translate">rpcListenPort_</td><td>      <input  class="value number" id="rpcListenPort" size="5" maxlength="5"/></td></tr>
+        <th>OCC Options</th>
+        <tr><td class="translate">force_</td><td><input type='checkbox' id="force" class="value"/></td></tr>
+        <tr><td class="translate">async_</td><td><input type='checkbox' id="async" class="value"/></td></tr>
+        <tr><td class="translate">demo_</td><td><input type='checkbox' id="demo" class="value"/></td></tr>
 
-    <table><tr>
-        <td><img src="logo.png"/></td>
-        <td><h3 class="translate">occ adapter settings</h3></td>
-    </tr></table>
+    </table>
 
-    <p class="translate">on save adapter restarts with new config immediately</p>
 
 </div>
-
 </html>
