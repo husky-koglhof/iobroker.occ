@@ -1,5 +1,53 @@
 # iobroker.occ
 
+## Bugfix
+- Startup Alert bei Initialladen / Reload des Kalenders.
+- Es kann zu keiner Anzeige nach Auswahl eines Geräts kommen
+	- Einfach die Woche wechseln, dann werden die Daten angezeigt
+- Entkalkungszeitpunkt
+- Angehakte Elemente in der Select Options Maske bleiben bei Reload erhalten
+
+## Erweiterungen
+- Steuerung von allen State Objekten möglich
+	- hm-rega
+- Objekte können als 
+	- "Fully Qualified" - hm-rpc.0.JEQ0710450.2.STATE
+	- "Short Name" - JEQ0710450.2
+	- "Name" - Licht Gang Nord
+	eingegeben werden
+- Objekte können mittels iCal gesteuert werden
+	- Getestet wurde ein Google Account
+	- Es muss eine iCal Instanz existieren (Derzeit nur eine Instanz verwendbar)
+	- In das Kommentarfeld eines Events muss folgende Logik eingebaut sein
+		- occ#OBJECT_ADDRESS#OBJECT_VALUE
+		- Beispiele
+			- HM-LC-Sw2-FM, HM-LC-Sw4-DR (Value muss on oder off sein)
+		- occ#Licht Gang Nord#on
+		- occ#Licht Gang Nord#off
+			- Rega Variablen (Boolean muss true oder false sein)
+		- occ#RegaVar-Boolean#true
+		- occ#RegaVar-Boolean#false
+		- occ#RegaVar-String#My Favourite Text
+	- Derzeit werden folgende Typen unterstützt
+		- hm-rega
+			- Value, Number, String, Boolean
+		- hm-rpc
+			- Switch
+	- Für on/off, true/false Events werden immer 2 Scheduler Objekte generiert
+		- 1. Eintrag mit dem eingetragenen Wert
+		- 2. Eintrag mit dem negierten Wert
+- Anzeige von Namen in Optionsmaske
+- Beim Öffnen des Kalendars wird eine Wartemaske angezeigt (Daten werden im Hintergrund geladen)
+
+## Offene Punkte:
+- Verteiltes System (mehrere Hosts)
+- Wiederholende Einträge
+- Skripte steuern
+- Übersetzung (Deutsch, Englisch, Russisch)
+- Umbenennung von iobroker.occ zu ioBroker.occ
+- Boost Temperature aktivieren
+- jQuery Mobile
+
 ## Beschreibung:
 Der Adapter Object Control Calendar (kurz iobroker.occ) ist ein Webkalender auf Basis fullcalendar (http://www.fullcalendar.io). Mit dem Kalender werden Homematic Thermostaten, Homematic Funk-Releais und MAX! Thermostaten zeitlich gesteuert.
 
@@ -33,18 +81,16 @@ Diese Option darf nach dem Speichern nicht mehr geändert werden, da ansonsten d
 
 
 ## Bekannte Fehler:
-.) CONFIG_PENDING wird bei MAX! Thermostaten nicht beendet
-.) Startup Alert bei Initialladen / Reload des Kalenders.
-.) In der “Select Options” Maske
-	.) Wenn Einträge aktiviert sind und es wird der “Reload” Button gedrückt, werden die Checkboxen abgewählt, die Einträge im Kalender bleiben aber aktiv.
-.) Bei wiederholtem Drücken des “Submit” Buttons zur Übertragung der Daten an die Geräte, blockiert homematic die Kommunikation.
-.) Bei neuem Auslesen der Geräte mittels occ werden immer neue Farben verwendet.
-.) Sonntags wird der Kalender für Thermostaten für die darauffolgende Woche erzeugt.
-.) Es kann zu keiner Anzeige nach Auswahl eines Geräts kommen
-	Einfach die Woche wechseln, dann werden die Daten angezeigt
+- CONFIG_PENDING wird bei MAX! Thermostaten nicht beendet
+- In der “Select Options” Maske
+	- Wenn Einträge aktiviert sind und es wird der “Reload” Button gedrückt, werden die Checkboxen abgewählt, die Einträge im Kalender bleiben aber aktiv.
+- Bei wiederholtem Drücken des “Submit” Buttons zur Übertragung der Daten an die Geräte, blockiert homematic die Kommunikation.
+- Bei neuem Auslesen der Geräte mittels occ werden immer neue Farben verwendet.
+- Sonntags wird der Kalender für Thermostaten für die darauffolgende Woche erzeugt.
 
 ## Funktionen:
 Der ObjectControlCalendar (OCC) beinhaltet derzeit folgende Funktionen:
+
 1.) Select Options
 	Hiermit können die jeweiligen Geräte Daten innerhalb des Kalenders angezeigt werden
 	Mittels “Reload” werden die JSON Dateien neu vom Dateisystem eingelesen und die Enumerationen neu berechnet
@@ -89,59 +135,66 @@ Bei Auswahl eines Schaltaktors erscheint die Ein / Aus Funktion
 Hier können nun die einzelnen Kalender Einträge angepasst werden.
 
 Folgende Logik muss für Homematic/MAX! Thermostaten eingehalten werden (lt. Homematic Spezifikation):
+
 1.) Pro Tag muss ein Eintrag vorhanden sein, der erste Eintrag muss folgendermassen lauten:
 	HM-CC-TC:
 		Name: TEMPERATUR_<DAY>_0
 	HM-CC-RT-DN und BC-RT-TRX-CyG-3
 		Name: TEMPERATURE_<DAY>_0
+
 2.) Jeder weitere Eintrag muss hochgezählt werden (TEMPERATUR_<DAY>_+1
+
 3.) Es dürfen max. 25 Einträge pro Tag verwendet werden
+
 4.) Einträge dürfen sich nicht überschneiden
+
 5.) Die Temperatur darf min Temperatur nicht unterschreiten und max Temperatur nicht überschreiten
+
 6.) Wenn ein Eintrag gelöscht wird, müssen die anderen lt. Punkt 1-4 angepasst werden
 
 Folgende Logik muss für Homematic Schaltaktoren eingehalten werden
+
 1.) Einträge sollen sich nicht überschneiden
 
 ## Getestete Systeme:
-.) OS: Linux, Mac OSX
-.) Windows Systeme sollten keinen Fehler beim Installieren bekommen, postinstall wurde OS unabhängig aufgebaut
+- OS: Linux, Mac OSX
+- Windows Systeme sollten keinen Fehler beim Installieren bekommen, postinstall wurde OS unabhängig aufgebaut
 
 ## Abhängigkeiten:
-#### node-schedule@0.2.8 (long-timeout@0.0.2, cron-parser@0.6.2)
-#### homematic-xmlrpc@1.0.1 (xmlbuilder@0.4.2, sax@0.4.3)
-#### fullcalendar@2.3.1 (jquery@2.1.4, moment@2.10.3)
-
-## Offene Punkte:
-.) Verteiltes System (mehrere Hosts)
-.) Entkalkungszeitpunkt
-.) Wiederholende Einträge
-.) Skripte steuern
-.) Übersetzung (Deutsch, Englisch, Russisch)
-.) Umbenennung von iobroker.occ zu ioBroker.occ
+- node-schedule@0.2.8 (long-timeout@0.0.2, cron-parser@0.6.2)
+- homematic-xmlrpc@1.0.1 (xmlbuilder@0.4.2, sax@0.4.3)
+- fullcalendar@2.3.1 (jquery@2.1.4, moment@2.10.3)
 
 ## Voraussetzungen:
-.) aktueller ioBroker
-.) aktuelle ioBroker.hm-rpc
-.) ioBroker.hmm (oder sonstiges Tool, um sich die Konfiguration am Objekt ansehen zu können)
-.) ioBroker.web
-.) es muss mind. ein hm-rpc mittels XML verfügbar sein, BIN ist nicht unterstützt (Getestet wurde nur der Homegear Daemon)
+- aktueller ioBroker
+- aktuelle ioBroker.hm-rpc
+- ioBroker.hmm (oder sonstiges Tool, um sich die Konfiguration am Objekt ansehen zu können)
+- ioBroker.web
+- es muss mind. ein hm-rpc mittels XML verfügbar sein, BIN ist nicht unterstützt (Getestet wurde nur der Homegear Daemon)
 
 ## Installation:
 Die ersten beiden Schritte sind solange notwendig, bis
 das Modul in ioBroker integriert ist.
+
 1.) Wechsel in das Home Verzeichnis von ioBroker
+
 2.) Wechsel in das Verzeichnis node_modules
+
 3.) Eingabe von npm install iobroker.occ
+
 4.) Hinzufügen einer Instanz mittels ioBroker Admin Web Oberfläche
 	Es wird automatisch eine ioBroker.web Instanz mit installiert, falls nicht vorhanden
+
 5.) Einrichten von Enumerations
+
 6.) Dazu in der ioBroker Admin Web Oberfläche in den Reiter Enums wechseln und links oben auf das + klicken
 	Name = occ (Dieser Name muss occ sein!)
-8.) Beim hinzugefügten Enum rechts auf das + klicken
+
+7.) Beim hinzugefügten Enum rechts auf das + klicken
 	Name = heating (Dieser Name wird für nur für die Gruppierung verwendet und kann frei vergeben werden)
 	Für jede Gruppe z.B. heating = Heizung, switch = Schalter, eine eigene Gruppe anlegen
-9.) Beim hinzugefügten Objekt nun das Notizbuch Symbol klicken
+
+8.) Beim hinzugefügten Objekt nun das Notizbuch Symbol klicken
 	Nun müssen die einzelnen zu steuernden Objekte hinzugefügt werden
 	Für HM-CC-TC den Kanal 2 auswählen und auf Select klicken (ist nicht aktiv, kann trotzdem angewendet werden)
 	Für HM-CC-RT-DN den Kanal 0 auswählen
@@ -151,22 +204,29 @@ das Modul in ioBroker integriert ist.
 
 ![pg8](img/pg8.png)
 
-10.) Zurückwechseln in die Lasche Instances
-11.) Die Konfiguration von ioBroker.occ öffnen
+9.) Zurückwechseln in die Lasche Instances
+
+10.) Die Konfiguration von ioBroker.occ öffnen
 	RPC Listen IP: Die ioBroker IP Adresse eintragen
 	RPC Listen Port Begin: Der kleinste Listener Port für die hm-rpc Kommunikation, wird pro Instanz automatisch hochgezählt
 	Force objects re-init (once): Es werden alle Kalenderdaten von den Objekten eingelesen und am lokalen Dateisystem überschrieben
 	Async Save Mode: Derzeit nicht implementiert
 	Demo Mode (save back to object disabled): Es werden die Kalenderdaten nur am lokalen Dateisystem geschrieben, es findet keine Übertragung zu den Objekten statt
-12.) Starten von ioBroker.occ
+
+11.) Starten von ioBroker.occ
 	Achtung: Beim erstmaligen Start, kommt es zum Fehler “Could not read occ-events_xxxxxxxxx.json”
 	Dieser ist gewollt, es sind noch keine Daten am lokalen Dateisystem vorhanden
-13.) Nach Start des occ Adapters kann dieser nun in der Weboberfläche geöffnet werden
+
+12.) Nach Start des occ Adapters kann dieser nun in der Weboberfläche geöffnet werden
 	Die Weboberfläche ist immer aktiv, sollte der Adapter nicht aktiv sein, werden die Daten nur am lokalen Dateisystem geschrieben, es findet keine Übertragung zu den Objekten statt
-14.) Der erste Popup, ist im Moment noch ein Platzhalter (Startup)
+
+13.) Der erste Popup, ist im Moment noch ein Platzhalter (Startup)
 
 
 ## Changelog
+
+### 0.1.2
+* (husky-koglhof) Siehe Dokumentation
 
 ### 0.1.0
 * (husky-koglhof) Siehe Dokumentation

@@ -31,6 +31,7 @@
     <script type="text/javascript" src="_socket/info.js"></script>
     <script type="text/javascript" src="conn.js"></script>
     <script type="text/javascript" src='occ.js'></script>
+    <!-- Todo: add Touch Punch -->
 
     <style>
         #progressbar {
@@ -160,204 +161,204 @@
     <hr id="Line1" style="position:absolute;left:16px;top:288px;width:317px;height:1px;z-index:89;">
     <hr id="Line3" style="position:absolute;left:16px;top:81px;width:317px;height:1px;z-index:90;">
     <div id="repeaterTab" style="display: none; position:absolute;left:346px;top:10px;z-index:91;width:330px;">
-    <ul>
-        <li><a href="#repeaterTab-page-0"><span>Daily</span></a></li>
-        <li><a href="#repeaterTab-page-1"><span>Weekly</span></a></li>
-        <li><a href="#repeaterTab-page-2"><span>Monthly</span></a></li>
-        <li><a href="#repeaterTab-page-3"><span>Yearly</span></a></li>
-    </ul>
-    <div style="height:297px;overflow:auto;padding:0;" id="repeaterTab-page-0">
-        <input type="text" id="dailyinput" style="position:absolute;left:65px;top:64px;width:30px;line-height:18px;z-index:0;" name="input_daily" value="1" maxlength="3">
-        <div style="position:absolute;left:110px;top:64px;width:36px;height:16px;z-index:1;text-align:left;">
-            <span>day</span>
+        <ul>
+            <li><a href="#repeaterTab-page-0"><span>Daily</span></a></li>
+            <li><a href="#repeaterTab-page-1"><span>Weekly</span></a></li>
+            <li><a href="#repeaterTab-page-2"><span>Monthly</span></a></li>
+            <li><a href="#repeaterTab-page-3"><span>Yearly</span></a></li>
+        </ul>
+        <div style="height:297px;overflow:auto;padding:0;" id="repeaterTab-page-0">
+            <input type="text" id="dailyinput" style="position:absolute;left:65px;top:64px;width:30px;line-height:18px;z-index:0;" name="input_daily" value="1" maxlength="3">
+            <div style="position:absolute;left:110px;top:64px;width:36px;height:16px;z-index:1;text-align:left;">
+                <span>day</span>
+            </div>
+            <div style="position:absolute;left:14px;top:64px;width:36px;height:16px;z-index:2;text-align:left;">
+                <span>Every</span>
+            </div>
         </div>
-        <div style="position:absolute;left:14px;top:64px;width:36px;height:16px;z-index:2;text-align:left;">
-            <span>Every</span>
+        <div style="height:297px;overflow:auto;padding:0;" id="repeaterTab-page-1">
+            <input type="text" id="weeklyinput" style="position:absolute;left:65px;top:64px;width:30px;line-height:18px;z-index:0;" name="input_weekly" value="1" maxlength="3">
+            <div style="position:absolute;left:110px;top:64px;width:100%;height:16px;z-index:1;text-align:left;">
+                <span>week on:</span>
+            </div>
+            <div style="position:absolute;left:14px;top:64px;width:36px;height:16px;z-index:2;text-align:left;">
+                <span>Every</span>
+            </div>
+            <div id="monthButtons" style="position:absolute;left:15px;top:100px;height:28px;z-index:12;">
+                <input type="checkbox" id="jqbmonday" name="button_weekly" value="Mon"><label style="width:120px;height:100%;" for="jqbmonday">Monday</label>
+            </div>
+            <div id="monthButtons" style="position:absolute;left:155px;top:100px;height:28px;z-index:11;">
+                <input type="checkbox" id="jqbtuesday" name="button_weekly" value="Tue"><label style="width:120px;height:100%;" for="jqbtuesday">Tuesday</label>
+            </div>
+            <div id="monthButtons" style="position:absolute;left:15px;top:140px;height:28px;z-index:10;">
+                <input type="checkbox" id="jqbwednesday" name="button_weekly" value="Wed"><label style="width:120px;height:100%;" for="jqbwednesday">Wednesday</label>
+            </div>
+            <div id="monthButtons" style="position:absolute;left:155px;top:140px;height:28px;z-index:6;">
+                <input type="checkbox" id="jqbthursday" name="button_weekly" value="Thu"><label style="width:120px;height:100%;" for="jqbthursday">Thursday</label>
+            </div>
+            <div id="monthButtons" style="position:absolute;left:15px;top:180px;height:28px;z-index:7;">
+                <input type="checkbox" id="jqbfriday" name="button_weekly" value="Fri"><label style="width:120px;height:100%;" for="jqbfriday">Friday</label>
+            </div>
+            <div id="monthButtons" style="position:absolute;left:155px;top:180px;height:28px;z-index:8;">
+                <input type="checkbox" id="jqbsaturday" name="button_weekly" value="Sat"><label style="width:120px;height:100%;" for="jqbsaturday">Saturday</label>
+            </div>
+            <div id="monthButtons" style="position:absolute;left:15px;top:220px;height:28px;z-index:9;">
+                <input type="checkbox" id="jqbsunday" name="button_weekly" value="Sun"><label style="width:120px;height:100%;" for="jqbsunday">Sunday</label>
+            </div>
         </div>
-    </div>
-    <div style="height:297px;overflow:auto;padding:0;" id="repeaterTab-page-1">
-        <input type="text" id="weeklyinput" style="position:absolute;left:65px;top:64px;width:30px;line-height:18px;z-index:0;" name="input_weekly" value="1" maxlength="3">
-        <div style="position:absolute;left:110px;top:64px;width:100%;height:16px;z-index:1;text-align:left;">
-           <span>week on:</span>
-        </div>
-        <div style="position:absolute;left:14px;top:64px;width:36px;height:16px;z-index:2;text-align:left;">
-            <span>Every</span>
-        </div>
-        <div id="monthButtons" style="position:absolute;left:15px;top:100px;height:28px;z-index:12;">
-            <input type="checkbox" id="jqbmonday" name="button_weekly" value="Mon"><label style="width:120px;height:100%;" for="jqbmonday">Monday</label>
-        </div>
-        <div id="monthButtons" style="position:absolute;left:155px;top:100px;height:28px;z-index:11;">
-            <input type="checkbox" id="jqbtuesday" name="button_weekly" value="Tue"><label style="width:120px;height:100%;" for="jqbtuesday">Tuesday</label>
-        </div>
-        <div id="monthButtons" style="position:absolute;left:15px;top:140px;height:28px;z-index:10;">
-            <input type="checkbox" id="jqbwednesday" name="button_weekly" value="Wed"><label style="width:120px;height:100%;" for="jqbwednesday">Wednesday</label>
-        </div>
-        <div id="monthButtons" style="position:absolute;left:155px;top:140px;height:28px;z-index:6;">
-            <input type="checkbox" id="jqbthursday" name="button_weekly" value="Thu"><label style="width:120px;height:100%;" for="jqbthursday">Thursday</label>
-        </div>
-        <div id="monthButtons" style="position:absolute;left:15px;top:180px;height:28px;z-index:7;">
-            <input type="checkbox" id="jqbfriday" name="button_weekly" value="Fri"><label style="width:120px;height:100%;" for="jqbfriday">Friday</label>
-        </div>
-        <div id="monthButtons" style="position:absolute;left:155px;top:180px;height:28px;z-index:8;">
-            <input type="checkbox" id="jqbsaturday" name="button_weekly" value="Sat"><label style="width:120px;height:100%;" for="jqbsaturday">Saturday</label>
-        </div>
-        <div id="monthButtons" style="position:absolute;left:15px;top:220px;height:28px;z-index:9;">
-            <input type="checkbox" id="jqbsunday" name="button_weekly" value="Sun"><label style="width:120px;height:100%;" for="jqbsunday">Sunday</label>
-        </div>
-    </div>
 
-    <div style="height:297px;overflow:auto;padding:0;" id="repeaterTab-page-2">
-        <div style="position:absolute;left:14px;top:64px;width:36px;height:16px;z-index:2;text-align:left;">
-            <span>Every</span>
-        </div>
-        <input type="text" id="monthlyinput" style="position:absolute;left:65px;top:64px;width:30px;line-height:18px;z-index:0;" name="input_monthly" value="1" maxlength="3">
+        <div style="height:297px;overflow:auto;padding:0;" id="repeaterTab-page-2">
+            <div style="position:absolute;left:14px;top:64px;width:36px;height:16px;z-index:2;text-align:left;">
+                <span>Every</span>
+            </div>
+            <input type="text" id="monthlyinput" style="position:absolute;left:65px;top:64px;width:30px;line-height:18px;z-index:0;" name="input_monthly" value="1" maxlength="3">
 
-        <input type="radio" id="monthlygroup1" name="group_each" value="on" style="position:absolute;left:12px;top:101px;z-index:13;">
-        <div style="position:absolute;left:35px;top:100px;width:137px;height:16px;z-index:21;text-align:left;">
-            <span>On Each</span></div>
-        <div style="position:absolute;left:36px;top:307px;width:137px;height:16px;z-index:25;text-align:left;">
-            <span>On the</span></div>
+            <input type="radio" id="monthlygroup1" name="group_each" value="on" style="position:absolute;left:12px;top:101px;z-index:13;">
+            <div style="position:absolute;left:35px;top:100px;width:137px;height:16px;z-index:21;text-align:left;">
+                <span>On Each</span></div>
+            <div style="position:absolute;left:36px;top:307px;width:137px;height:16px;z-index:25;text-align:left;">
+                <span>On the</span></div>
             <select name="each_first" size="1" id="monthlycombofirst" style="position:absolute;left:110px;top:305px;width:60px;z-index:26;">
-            <option value="1">1st</option>
-            <option value="2">2nd</option>
-            <option value="3">3rd</option>
-            <option value="4">4th</option>
-            <option value="5">last</option>
+                <option value="1">1st</option>
+                <option value="2">2nd</option>
+                <option value="3">3rd</option>
+                <option value="4">4th</option>
+                <option value="5">last</option>
             </select>
             <select name="each_day" size="1" id="monthlycombosecond" style="position:absolute;left:180px;top:305px;width:150px;z-index:27;">
-            <option value="1">Monday</option>
-            <option value="2">Tuesday</option>
-            <option value="3">Wednesday</option>
-            <option value="4">Thursday</option>
-            <option value="5">Friday</option>
-            <option value="6">Saturday</option>
-            <option value="7">Sunday</option>
+                <option value="1">Monday</option>
+                <option value="2">Tuesday</option>
+                <option value="3">Wednesday</option>
+                <option value="4">Thursday</option>
+                <option value="5">Friday</option>
+                <option value="6">Saturday</option>
+                <option value="7">Sunday</option>
             </select>
             <input type="radio" id="monthlygroup2" name="group_each" value="on" style="position:absolute;left:12px;top:308px;z-index:28;">
-        <div style="position:absolute;left:110px;top:64px;width:36px;height:16px;z-index:1;text-align:left;  ">
-            <span>month:</span></div>
-        <div id="monthButtons" style="position:absolute;left:11px;top:133px;width:28px;height:28px;z-index:14;">
-            <input type="checkbox" id="jqb1" name="button_monthly" value="1"><label style="width:100%;height:100%;" for="jqb1">1</label>
+            <div style="position:absolute;left:110px;top:64px;width:36px;height:16px;z-index:1;text-align:left;  ">
+                <span>month:</span></div>
+            <div id="monthButtons" style="position:absolute;left:11px;top:133px;width:28px;height:28px;z-index:14;">
+                <input type="checkbox" id="jqb1" name="button_monthly" value="1"><label style="width:100%;height:100%;" for="jqb1">1</label>
+            </div>
+            <div id="monthButtons" style="position:absolute;left:44px;top:133px;width:28px;height:28px;z-index:16;">
+                <input type="checkbox" id="jqb2" name="button_monthly" value="2"><label style="width:100%;height:100%;" for="jqb2">2</label></div>
+            <div id="monthButtons" style="position:absolute;left:77px;top:133px;width:28px;height:28px;z-index:18;">
+                <input type="checkbox" id="jqb3" name="button_monthly" value="3"><label style="width:100%;height:100%;" for="jqb3">3</label></div>
+            <div id="monthButtons" style="position:absolute;left:110px;top:133px;width:28px;height:28px;z-index:20;">
+                <input type="checkbox" id="jqb4" name="button_monthly" value="4"><label style="width:100%;height:100%;" for="jqb4">4</label></div>
+            <div id="monthButtons" style="position:absolute;left:143px;top:133px;width:28px;height:28px;z-index:22;">
+                <input type="checkbox" id="jqb5" name="button_monthly" value="5"><label style="width:100%;height:100%;" for="jqb5">5</label></div>
+            <div id="monthButtons" style="position:absolute;left:176px;top:133px;width:28px;height:28px;z-index:23;">
+                <input type="checkbox" id="jqb6" name="button_monthly" value="6"><label style="width:100%;height:100%;" for="jqb6">6</label></div>
+            <div id="monthButtons" style="position:absolute;left:209px;top:133px;width:28px;height:28px;z-index:24;">
+                <input type="checkbox" id="jqb7" name="button_monthly" value="7"><label style="width:100%;height:100%;" for="jqb7">7</label></div>
+            <div id="monthButtons" style="position:absolute;left:11px;top:165px;width:28px;height:28px;z-index:29;">
+                <input type="checkbox" id="jqb8" name="button_monthly" value="8"><label style="width:100%;height:100%;" for="jqb8">8</label></div>
+            <div id="monthButtons" style="position:absolute;left:44px;top:165px;width:28px;height:28px;z-index:30;">
+                <input type="checkbox" id="jqb9" name="button_monthly" value="9"><label style="width:100%;height:100%;" for="jqb9">9</label></div>
+            <div id="monthButtons" style="position:absolute;left:77px;top:165px;width:28px;height:28px;z-index:31;">
+                <input type="checkbox" id="jqb10" name="button_monthly" value="10"><label style="width:100%;height:100%;" for="jqb10">10</label></div>
+            <div id="monthButtons" style="position:absolute;left:110px;top:165px;width:28px;height:28px;z-index:32;">
+                <input type="checkbox" id="jqb11" name="button_monthly" value="11"><label style="width:100%;height:100%;" for="jqb11">11</label></div>
+            <div id="monthButtons" style="position:absolute;left:143px;top:165px;width:28px;height:28px;z-index:33;">
+                <input type="checkbox" id="jqb12" name="button_monthly" value="12"><label style="width:100%;height:100%;" for="jqb12">12</label></div>
+            <div id="monthButtons" style="position:absolute;left:175px;top:165px;width:28px;height:28px;z-index:34;">
+                <input type="checkbox" id="jqb13" name="button_monthly" value="13"><label style="width:100%;height:100%;" for="jqb13">13</label></div>
+            <div id="monthButtons" style="position:absolute;left:209px;top:165px;width:28px;height:28px;z-index:35;">
+                <input type="checkbox" id="jqb14" name="button_monthly" value="14"><label style="width:100%;height:100%;" for="jqb14">14</label></div>
+            <div id="monthButtons" style="position:absolute;left:11px;top:198px;width:28px;height:28px;z-index:42;">
+                <input type="checkbox" id="jqb15" name="button_monthly" value="15"><label style="width:100%;height:100%;" for="jqb15">15</label></div>
+            <div id="monthButtons" style="position:absolute;left:44px;top:198px;width:28px;height:28px;z-index:36;">
+                <input type="checkbox" id="jqb16" name="button_monthly" value="16"><label style="width:100%;height:100%;" for="jqb16">16</label></div>
+            <div id="monthButtons" style="position:absolute;left:77px;top:198px;width:28px;height:28px;z-index:37;">
+                <input type="checkbox" id="jqb17" name="button_monthly" value="17"><label style="width:100%;height:100%;" for="jqb17">17</label></div>
+            <div id="monthButtons" style="position:absolute;left:110px;top:198px;width:28px;height:28px;z-index:38;">
+                <input type="checkbox" id="jqb18" name="button_monthly" value="18"><label style="width:100%;height:100%;" for="jqb18">18</label></div>
+            <div id="monthButtons" style="position:absolute;left:143px;top:198px;width:28px;height:28px;z-index:39;">
+                <input type="checkbox" id="jqb19" name="button_monthly" value="19"><label style="width:100%;height:100%;" for="jqb19">19</label></div>
+            <div id="monthButtons" style="position:absolute;left:176px;top:198px;width:28px;height:28px;z-index:40;">
+                <input type="checkbox" id="jqb20" name="button_monthly" value="20"><label style="width:100%;height:100%;" for="jqb20">20</label></div>
+            <div id="monthButtons" style="position:absolute;left:209px;top:198px;width:28px;height:28px;z-index:41;">
+                <input type="checkbox" id="jqb21" name="button_monthly" value="21"><label style="width:100%;height:100%;" for="jqb21">21</label></div>
+            <div id="monthButtons" style="position:absolute;left:11px;top:231px;width:28px;height:28px;z-index:49;">
+                <input type="checkbox" id="jqb22" name="button_monthly" value="22"><label style="width:100%;height:100%;" for="jqb22">22</label></div>
+            <div id="monthButtons" style="position:absolute;left:44px;top:231px;width:28px;height:28px;z-index:48;">
+                <input type="checkbox" id="jqb23" name="button_monthly" value="23"><label style="width:100%;height:100%;" for="jqb23">23</label></div>
+            <div id="monthButtons" style="position:absolute;left:77px;top:231px;width:28px;height:28px;z-index:47;">
+                <input type="checkbox" id="jqb24" name="button_monthly" value="24"><label style="width:100%;height:100%;" for="jqb24">24</label></div>
+            <div id="monthButtons" style="position:absolute;left:110px;top:231px;width:28px;height:28px;z-index:43;">
+                <input type="checkbox" id="jqb25" name="button_monthly" value="25"><label style="width:100%;height:100%;" for="jqb25">25</label></div>
+            <div id="monthButtons" style="position:absolute;left:143px;top:231px;width:28px;height:28px;z-index:44;">
+                <input type="checkbox" id="jqb26" name="button_monthly" value="26"><label style="width:100%;height:100%;" for="jqb26">26</label></div>
+            <div id="monthButtons" style="position:absolute;left:176px;top:231px;width:28px;height:28px;z-index:45;">
+                <input type="checkbox" id="jqb27" name="button_monthly" value="27"><label style="width:100%;height:100%;" for="jqb27">27</label></div>
+            <div id="monthButtons" style="position:absolute;left:209px;top:231px;width:28px;height:28px;z-index:46;">
+                <input type="checkbox" id="jqb28" name="button_monthly" value="28"><label style="width:100%;height:100%;" for="jqb28">28</label></div>
+            <div id="monthButtons" style="position:absolute;left:11px;top:264px;width:28px;height:28px;z-index:52;">
+                <input type="checkbox" id="jqb29" name="button_monthly" value="29"><label style="width:100%;height:100%;" for="jqb29">29</label></div>
+            <div id="monthButtons" style="position:absolute;left:44px;top:264px;width:28px;height:28px;z-index:51;">
+                <input type="checkbox" id="jqb30" name="button_monthly" value="30"><label style="width:100%;height:100%;" for="jqb30">30</label></div>
+            <div id="monthButtons" style="position:absolute;left:77px;top:264px;width:28px;height:28px;z-index:50;">
+                <input type="checkbox" id="jqb31" name="button_monthly" value="31"><label style="width:100%;height:100%;" for="jqb31">31</label></div>
         </div>
-        <div id="monthButtons" style="position:absolute;left:44px;top:133px;width:28px;height:28px;z-index:16;">
-            <input type="checkbox" id="jqb2" name="button_monthly" value="2"><label style="width:100%;height:100%;" for="jqb2">2</label></div>
-        <div id="monthButtons" style="position:absolute;left:77px;top:133px;width:28px;height:28px;z-index:18;">
-            <input type="checkbox" id="jqb3" name="button_monthly" value="3"><label style="width:100%;height:100%;" for="jqb3">3</label></div>
-        <div id="monthButtons" style="position:absolute;left:110px;top:133px;width:28px;height:28px;z-index:20;">
-            <input type="checkbox" id="jqb4" name="button_monthly" value="4"><label style="width:100%;height:100%;" for="jqb4">4</label></div>
-        <div id="monthButtons" style="position:absolute;left:143px;top:133px;width:28px;height:28px;z-index:22;">
-            <input type="checkbox" id="jqb5" name="button_monthly" value="5"><label style="width:100%;height:100%;" for="jqb5">5</label></div>
-        <div id="monthButtons" style="position:absolute;left:176px;top:133px;width:28px;height:28px;z-index:23;">
-            <input type="checkbox" id="jqb6" name="button_monthly" value="6"><label style="width:100%;height:100%;" for="jqb6">6</label></div>
-        <div id="monthButtons" style="position:absolute;left:209px;top:133px;width:28px;height:28px;z-index:24;">
-            <input type="checkbox" id="jqb7" name="button_monthly" value="7"><label style="width:100%;height:100%;" for="jqb7">7</label></div>
-        <div id="monthButtons" style="position:absolute;left:11px;top:165px;width:28px;height:28px;z-index:29;">
-            <input type="checkbox" id="jqb8" name="button_monthly" value="8"><label style="width:100%;height:100%;" for="jqb8">8</label></div>
-        <div id="monthButtons" style="position:absolute;left:44px;top:165px;width:28px;height:28px;z-index:30;">
-            <input type="checkbox" id="jqb9" name="button_monthly" value="9"><label style="width:100%;height:100%;" for="jqb9">9</label></div>
-        <div id="monthButtons" style="position:absolute;left:77px;top:165px;width:28px;height:28px;z-index:31;">
-            <input type="checkbox" id="jqb10" name="button_monthly" value="10"><label style="width:100%;height:100%;" for="jqb10">10</label></div>
-        <div id="monthButtons" style="position:absolute;left:110px;top:165px;width:28px;height:28px;z-index:32;">
-        <input type="checkbox" id="jqb11" name="button_monthly" value="11"><label style="width:100%;height:100%;" for="jqb11">11</label></div>
-        <div id="monthButtons" style="position:absolute;left:143px;top:165px;width:28px;height:28px;z-index:33;">
-        <input type="checkbox" id="jqb12" name="button_monthly" value="12"><label style="width:100%;height:100%;" for="jqb12">12</label></div>
-        <div id="monthButtons" style="position:absolute;left:175px;top:165px;width:28px;height:28px;z-index:34;">
-        <input type="checkbox" id="jqb13" name="button_monthly" value="13"><label style="width:100%;height:100%;" for="jqb13">13</label></div>
-        <div id="monthButtons" style="position:absolute;left:209px;top:165px;width:28px;height:28px;z-index:35;">
-        <input type="checkbox" id="jqb14" name="button_monthly" value="14"><label style="width:100%;height:100%;" for="jqb14">14</label></div>
-        <div id="monthButtons" style="position:absolute;left:11px;top:198px;width:28px;height:28px;z-index:42;">
-        <input type="checkbox" id="jqb15" name="button_monthly" value="15"><label style="width:100%;height:100%;" for="jqb15">15</label></div>
-        <div id="monthButtons" style="position:absolute;left:44px;top:198px;width:28px;height:28px;z-index:36;">
-        <input type="checkbox" id="jqb16" name="button_monthly" value="16"><label style="width:100%;height:100%;" for="jqb16">16</label></div>
-        <div id="monthButtons" style="position:absolute;left:77px;top:198px;width:28px;height:28px;z-index:37;">
-        <input type="checkbox" id="jqb17" name="button_monthly" value="17"><label style="width:100%;height:100%;" for="jqb17">17</label></div>
-        <div id="monthButtons" style="position:absolute;left:110px;top:198px;width:28px;height:28px;z-index:38;">
-        <input type="checkbox" id="jqb18" name="button_monthly" value="18"><label style="width:100%;height:100%;" for="jqb18">18</label></div>
-        <div id="monthButtons" style="position:absolute;left:143px;top:198px;width:28px;height:28px;z-index:39;">
-        <input type="checkbox" id="jqb19" name="button_monthly" value="19"><label style="width:100%;height:100%;" for="jqb19">19</label></div>
-        <div id="monthButtons" style="position:absolute;left:176px;top:198px;width:28px;height:28px;z-index:40;">
-        <input type="checkbox" id="jqb20" name="button_monthly" value="20"><label style="width:100%;height:100%;" for="jqb20">20</label></div>
-        <div id="monthButtons" style="position:absolute;left:209px;top:198px;width:28px;height:28px;z-index:41;">
-        <input type="checkbox" id="jqb21" name="button_monthly" value="21"><label style="width:100%;height:100%;" for="jqb21">21</label></div>
-        <div id="monthButtons" style="position:absolute;left:11px;top:231px;width:28px;height:28px;z-index:49;">
-        <input type="checkbox" id="jqb22" name="button_monthly" value="22"><label style="width:100%;height:100%;" for="jqb22">22</label></div>
-        <div id="monthButtons" style="position:absolute;left:44px;top:231px;width:28px;height:28px;z-index:48;">
-        <input type="checkbox" id="jqb23" name="button_monthly" value="23"><label style="width:100%;height:100%;" for="jqb23">23</label></div>
-        <div id="monthButtons" style="position:absolute;left:77px;top:231px;width:28px;height:28px;z-index:47;">
-        <input type="checkbox" id="jqb24" name="button_monthly" value="24"><label style="width:100%;height:100%;" for="jqb24">24</label></div>
-        <div id="monthButtons" style="position:absolute;left:110px;top:231px;width:28px;height:28px;z-index:43;">
-        <input type="checkbox" id="jqb25" name="button_monthly" value="25"><label style="width:100%;height:100%;" for="jqb25">25</label></div>
-        <div id="monthButtons" style="position:absolute;left:143px;top:231px;width:28px;height:28px;z-index:44;">
-        <input type="checkbox" id="jqb26" name="button_monthly" value="26"><label style="width:100%;height:100%;" for="jqb26">26</label></div>
-        <div id="monthButtons" style="position:absolute;left:176px;top:231px;width:28px;height:28px;z-index:45;">
-        <input type="checkbox" id="jqb27" name="button_monthly" value="27"><label style="width:100%;height:100%;" for="jqb27">27</label></div>
-        <div id="monthButtons" style="position:absolute;left:209px;top:231px;width:28px;height:28px;z-index:46;">
-        <input type="checkbox" id="jqb28" name="button_monthly" value="28"><label style="width:100%;height:100%;" for="jqb28">28</label></div>
-        <div id="monthButtons" style="position:absolute;left:11px;top:264px;width:28px;height:28px;z-index:52;">
-        <input type="checkbox" id="jqb29" name="button_monthly" value="29"><label style="width:100%;height:100%;" for="jqb29">29</label></div>
-        <div id="monthButtons" style="position:absolute;left:44px;top:264px;width:28px;height:28px;z-index:51;">
-        <input type="checkbox" id="jqb30" name="button_monthly" value="30"><label style="width:100%;height:100%;" for="jqb30">30</label></div>
-        <div id="monthButtons" style="position:absolute;left:77px;top:264px;width:28px;height:28px;z-index:50;">
-        <input type="checkbox" id="jqb31" name="button_monthly" value="31"><label style="width:100%;height:100%;" for="jqb31">31</label></div>
-    </div>
 
-    <div style="height:297px;overflow:auto;padding:0;" id="repeaterTab-page-3">
-    <input type="text" id="yearlyinput" style="position:absolute;left:65px;top:64px;width:30px;line-height:18px;z-index:0;" name="input_yearly" value="1" maxlength="3">
-    <div style="position:absolute;left:110px;top:64px;width:100%;height:16px;z-index:1;text-align:left;">
-    <span>year:</span></div>
+        <div style="height:297px;overflow:auto;padding:0;" id="repeaterTab-page-3">
+            <input type="text" id="yearlyinput" style="position:absolute;left:65px;top:64px;width:30px;line-height:18px;z-index:0;" name="input_yearly" value="1" maxlength="3">
+            <div style="position:absolute;left:110px;top:64px;width:100%;height:16px;z-index:1;text-align:left;">
+                <span>year:</span></div>
 
-    <input id="yearlygroup1" type="radio" style="position:absolute;left:12px;top:101px;z-index:13;" value="on" name="group_each"></input>
-    <div style="position:absolute;left:35px;top:100px;width:137px;height:16px;z-index:21;text-align:left;">
-        <span>On Each</span>
-    </div>
+            <input id="yearlygroup1" type="radio" style="position:absolute;left:12px;top:101px;z-index:13;" value="on" name="group_each"></input>
+            <div style="position:absolute;left:35px;top:100px;width:137px;height:16px;z-index:21;text-align:left;">
+                <span>On Each</span>
+            </div>
 
-    <div style="position:absolute;left:14px;top:64px;width:36px;height:16px;z-index:2;text-align:left;">
-    <span>Every</span></div>
-    <div id="monthButtons" style="left:11px;top:133px;z-index:59;">
-        <input type="checkbox" id="jqbjan" name="button_yearly" value="Jan"><label style="width:100%;height:100%;" for="jqbjan">Jan</label></div>
-    <div id="monthButtons" style="left:75px;top:133px;z-index:56;">
-        <input type="checkbox" id="jqbfeb" name="button_yearly" value="Feb"><label style="width:100%;height:100%;" for="jqbfeb">Feb</label></div>
-    <div id="monthButtons" style="left:138px;top:133px;z-index:57;">
-        <input type="checkbox" id="jqbmar" name="button_yearly" value="Mar"><label style="width:100%;height:100%;" for="jqbmar">Mar</label></div>
-    <div id="monthButtons" style="left:202px;top:133px;z-index:58;">
-        <input type="checkbox" id="jqbapr" name="button_yearly" value="Apr"><label style="width:100%;height:100%;" for="jqbapr">Apr</label></div>
-    <div id="monthButtons" style="left:11px;top:173px;z-index:63;">
-        <input type="checkbox" id="jqbmay" name="button_yearly" value="May"><label style="width:100%;height:100%;" for="jqbmay">May</label></div>
-    <div id="monthButtons" style="left:75px;top:173px;z-index:60;">
-        <input type="checkbox" id="jqbjun" name="button_yearly" value="Jun"><label style="width:100%;height:100%;" for="jqbjun">Jun</label></div>
-    <div id="monthButtons" style="left:138px;top:173px;z-index:61;">
-        <input type="checkbox" id="jqbjul" name="button_yearly" value="Jul"><label style="width:100%;height:100%;" for="jqbjul">Jul</label></div>
-    <div id="monthButtons" style="left:202px;top:173px;z-index:62;">
-    <input type="checkbox" id="jqbaug" name="button_yearly" value="Aug"><label style="width:100%;height:100%;" for="jqbaug">Aug</label></div>
-    <div id="monthButtons" style="left:11px;top:213px;z-index:67;">
-        <input type="checkbox" id="jqbsep" name="button_yearly" value="Sep"><label style="width:100%;height:100%;" for="jqbsep">Sep</label></div>
-    <div id="monthButtons" style="left:75px;top:213px;z-index:64;">
-        <input type="checkbox" id="jqboct" name="button_yearly" value="Oct"><label style="width:100%;height:100%;" for="jqboct">Oct</label></div>
-    <div id="monthButtons" style="left:139px;top:213px;z-index:65;">
-        <input type="checkbox" id="jqbnov" name="button_yearly" value="Nov"><label style="width:100%;height:100%;" for="jqbnov">Nov</label></div>
-    <div id="monthButtons" style="left:202px;top:213px;z-index:66;">
-        <input type="checkbox" id="jqbdec" name="button_yearly" value="Dec"><label style="width:100%;height:100%;" for="jqbdec">Dec</label></div>
-    <input type="radio" id="yearlygroup2" name="group_each" value="on" style="position:absolute;left:12px;top:308px;z-index:28;">
-    <div style="position:absolute;left:36px;top:307px;width:137px;height:16px;z-index:25;text-align:left;">
-    <span>On the</span></div>
-    <select name="each_first" size="1" id="yearlycombofirst" style="position:absolute;left:110px;top:305px;width:60px;z-index:26;">
-    <option value="1">1st</option>
-    <option value="2">2nd</option>
-    <option value="3">3rd</option>
-    <option value="4">4th</option>
-    <option value="5">last</option>
-    </select>
-    <select name="each_day" size="1" id="yearlycombosecond" style="position:absolute;left:180px;top:305px;width:150px;z-index:27;">
-    <option value="1">Monday</option>
-    <option value="2">Tuesday</option>
-    <option value="3">Wednesday</option>
-    <option value="4">Thursday</option>
-    <option value="5">Friday</option>
-    <option value="6">Saturday</option>
-    <option value="7">Sunday</option>
-    </select>
+            <div style="position:absolute;left:14px;top:64px;width:36px;height:16px;z-index:2;text-align:left;">
+                <span>Every</span></div>
+            <div id="monthButtons" style="left:11px;top:133px;z-index:59;">
+                <input type="checkbox" id="jqbjan" name="button_yearly" value="Jan"><label style="width:100%;height:100%;" for="jqbjan">Jan</label></div>
+            <div id="monthButtons" style="left:75px;top:133px;z-index:56;">
+                <input type="checkbox" id="jqbfeb" name="button_yearly" value="Feb"><label style="width:100%;height:100%;" for="jqbfeb">Feb</label></div>
+            <div id="monthButtons" style="left:138px;top:133px;z-index:57;">
+                <input type="checkbox" id="jqbmar" name="button_yearly" value="Mar"><label style="width:100%;height:100%;" for="jqbmar">Mar</label></div>
+            <div id="monthButtons" style="left:202px;top:133px;z-index:58;">
+                <input type="checkbox" id="jqbapr" name="button_yearly" value="Apr"><label style="width:100%;height:100%;" for="jqbapr">Apr</label></div>
+            <div id="monthButtons" style="left:11px;top:173px;z-index:63;">
+                <input type="checkbox" id="jqbmay" name="button_yearly" value="May"><label style="width:100%;height:100%;" for="jqbmay">May</label></div>
+            <div id="monthButtons" style="left:75px;top:173px;z-index:60;">
+                <input type="checkbox" id="jqbjun" name="button_yearly" value="Jun"><label style="width:100%;height:100%;" for="jqbjun">Jun</label></div>
+            <div id="monthButtons" style="left:138px;top:173px;z-index:61;">
+                <input type="checkbox" id="jqbjul" name="button_yearly" value="Jul"><label style="width:100%;height:100%;" for="jqbjul">Jul</label></div>
+            <div id="monthButtons" style="left:202px;top:173px;z-index:62;">
+                <input type="checkbox" id="jqbaug" name="button_yearly" value="Aug"><label style="width:100%;height:100%;" for="jqbaug">Aug</label></div>
+            <div id="monthButtons" style="left:11px;top:213px;z-index:67;">
+                <input type="checkbox" id="jqbsep" name="button_yearly" value="Sep"><label style="width:100%;height:100%;" for="jqbsep">Sep</label></div>
+            <div id="monthButtons" style="left:75px;top:213px;z-index:64;">
+                <input type="checkbox" id="jqboct" name="button_yearly" value="Oct"><label style="width:100%;height:100%;" for="jqboct">Oct</label></div>
+            <div id="monthButtons" style="left:139px;top:213px;z-index:65;">
+                <input type="checkbox" id="jqbnov" name="button_yearly" value="Nov"><label style="width:100%;height:100%;" for="jqbnov">Nov</label></div>
+            <div id="monthButtons" style="left:202px;top:213px;z-index:66;">
+                <input type="checkbox" id="jqbdec" name="button_yearly" value="Dec"><label style="width:100%;height:100%;" for="jqbdec">Dec</label></div>
+            <input type="radio" id="yearlygroup2" name="group_each" value="on" style="position:absolute;left:12px;top:308px;z-index:28;">
+            <div style="position:absolute;left:36px;top:307px;width:137px;height:16px;z-index:25;text-align:left;">
+                <span>On the</span></div>
+            <select name="each_first" size="1" id="yearlycombofirst" style="position:absolute;left:110px;top:305px;width:60px;z-index:26;">
+                <option value="1">1st</option>
+                <option value="2">2nd</option>
+                <option value="3">3rd</option>
+                <option value="4">4th</option>
+                <option value="5">last</option>
+            </select>
+            <select name="each_day" size="1" id="yearlycombosecond" style="position:absolute;left:180px;top:305px;width:150px;z-index:27;">
+                <option value="1">Monday</option>
+                <option value="2">Tuesday</option>
+                <option value="3">Wednesday</option>
+                <option value="4">Thursday</option>
+                <option value="5">Friday</option>
+                <option value="6">Saturday</option>
+                <option value="7">Sunday</option>
+            </select>
+        </div>
     </div>
-</div>
 
     <hr id="Line4" style="position:absolute;left:16px;top:197px;width:317px;height:1px;z-index:93;">
     <div id="wb_jQuerySpinner1" style="position:absolute;left:104px;top:161px;width:77px;height:26px;z-index:94; display: none;">
@@ -373,21 +374,35 @@
     <div style="position:absolute;left:130px;top:165px;width:10px;height:16px;text-align:right;z-index:98; display: none;" id="divSpinner">
         <nobr>
             <input id="temperature_spinner" type='number' name="temperature_spinner" value="19.0" style='width:45px'>  Celsius
-            <input type="radio" name="setter" id="setDECALCIFICATION" disabled>Decalcification
+            <input type="radio" name="setter" id="setDECALCIFICATION">Decalcification
         </nobr>
     </div>
 
-<!-- Todo: not yet supported
-    <input type="button" id="button_script" name="button_script" value="Select" style="position:absolute; left:240px;top:157px;z-index:96;">
-    <div style="position:absolute;left:16px;top:164px;width:80px;height:16px;text-align:left;z-index:99; display: block;">
-        <span>Script:</span>
-    </div>
--->
+    <!-- Todo: not yet supported
+        <input type="button" id="button_script" name="button_script" value="Select" style="position:absolute; left:240px;top:157px;z-index:96;">
+        <div style="position:absolute;left:16px;top:164px;width:80px;height:16px;text-align:left;z-index:99; display: block;">
+            <span>Script:</span>
+        </div>
+    -->
 
     <div style="position:absolute;left:16px;top:165px;width:300px;height:16px;text-align:left;z-index:98; display: block;" id="divSwitch">
-        <nobr><span>Switch On/Off:</span><input type="checkbox" id="switcher" name="" value="on"></nobr>
+        <nobr><span>Switch On/Off:</span><input type="checkbox" id="switcher" value="on"></nobr>
     </div>
 
+    <div id=divState_20 style="position:absolute;left:16px;top:165px;width:300px;height:16px;text-align:left;z-index:98; display:none">
+        <nobr><span>State:</span>&nbsp;<input type="text" id="state_input_20" value="text"></nobr>
+    </div>
+    <div id=divState_2 style="position:absolute;left:16px;top:165px;width:300px;height:16px;text-align:left;z-index:98; display:none">
+        <nobr><span>State:</span>&nbsp;<input type="checkbox" id="state_input_2"></nobr>
+    </div>
+
+    <div id=divState_16 style="position:absolute;left:16px;top:165px;width:300px;height:16px;text-align:left;z-index:98; display:none">
+        <nobr><span>State:</span>&nbsp;<input type="text" id="state_input_16" value="valuelist"></nobr>
+    </div>
+
+    <div id=divState_4 style="position:absolute;left:16px;top:165px;width:300px;height:16px;text-align:left;z-index:98; display:none">
+        <nobr><span>State:</span>&nbsp;<input type="text" id="state_input_4" value="123456"></nobr>
+    </div>
 
     <input type="text" style="display: none; position:absolute;left:173px;top:337px;width:29px;z-index:101;" name="input_times" value="1">
     <div style="display: none; position:absolute;left:213px;top:341px;width:46px;height:16px;z-index:102;text-align:left;">

@@ -55,6 +55,7 @@ fc.sourceNormalizers.push(function(sourceOptions) {
 		if (sourceOptions.editable == null) {
 			sourceOptions.editable = false;
 		}
+		sourceOptions.editable = true;
 
 		// We want removeEventSource to work, but it won't know about the googleCalendarId primitive.
 		// Shoehorn it into the url, which will function as the unique primitive. Won't cause side effects.
@@ -131,6 +132,7 @@ function transformOptions(sourceOptions, start, end, timezone, calendar) {
 		endParam: false, // same
 		timezoneParam: false, // same
 		success: function(data) {
+			console.log(JSON.stringify(data));
 			var events = [];
 			var successArgs;
 			var successRes;
@@ -146,13 +148,15 @@ function transformOptions(sourceOptions, start, end, timezone, calendar) {
 					if (timezoneArg) {
 						url = injectQsComponent(url, 'ctz=' + timezoneArg);
 					}
+					console.log(JSON.stringify(entry));
 
 					events.push({
+						color: "#66FF99",
 						id: entry.id,
 						title: entry.summary,
 						start: entry.start.dateTime || entry.start.date, // try timed. will fall back to all-day
 						end: entry.end.dateTime || entry.end.date, // same
-						url: url,
+						//url: url,
 						location: entry.location,
 						description: entry.description
 					});

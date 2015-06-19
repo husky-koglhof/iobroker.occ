@@ -1,6 +1,6 @@
 {
   "name": "iobroker.occ",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "Object Control Calendar for ioBroker",
   "main": "main.js",
   "scripts": {
@@ -33,7 +33,7 @@
     "url": "https://github.com/husky-koglhof/iobroker.occ/issues"
   },
   "gitHead": "5ff004a6d93fa6fed0c7b17bbe5c604a1dfff731",
-  "_id": "iobroker.occ@0.0.90",
-  "_shasum": "c01e5a6ee251be6ceeb98488140b9653ebcc4dd6",
+  "_id": "iobroker.occ@0.1.0",
+  "_shasum": "442f205080b5304491024da16dcc7cd2137af8e9",
   "_from": "iobroker.occ@*"
 }
