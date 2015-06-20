@@ -61,7 +61,6 @@ var adapter = utils.adapter({
             adapter.subscribeForeignObjects('*');
             adapter.subscribeForeignStates('*');
             main();
-            adapter.config.iCal = true;
             if (adapter.config.iCal == true) {
                 adapter.log.debug("init iCal Objects...");
                 addiCalObjects();
@@ -78,7 +77,6 @@ var adapter = utils.adapter({
             /* Todo Reload Data */
             getData(function () {
                 loadData();
-                adapter.config.iCal = true;
                 if (adapter.config.iCal == true) {
                     adapter.log.debug("init iCal Objects...");
                     addiCalObjects();
