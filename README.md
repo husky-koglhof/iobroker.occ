@@ -225,6 +225,15 @@ das Modul in ioBroker integriert ist.
 
 ## Changelog
 
+### 0.1.20
+* (husky-koglhof) 
+- Bugfix:
+- admin.html: iCal Language Support
+- io-package.json: ical Dependency und native ical true
+- main.js: Abfrage ob iCal Parameter gesetzt
+- io-package.json: readme link hinzugefügt, loglevel auf info gesetzt
+- img: Alle Images hochgeladen
+
 ### 0.1.2
 * (husky-koglhof) Siehe Dokumentation
 
