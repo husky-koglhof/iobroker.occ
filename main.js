@@ -62,7 +62,7 @@ var adapter = utils.adapter({
             adapter.subscribeForeignStates('*');
             main();
             adapter.config.iCal = true;
-            if (adapter.config.iCal) {
+            if (adapter.config.iCal == true) {
                 adapter.log.debug("init iCal Objects...");
                 addiCalObjects();
             }
@@ -79,7 +79,7 @@ var adapter = utils.adapter({
             getData(function () {
                 loadData();
                 adapter.config.iCal = true;
-                if (adapter.config.iCal) {
+                if (adapter.config.iCal == true) {
                     adapter.log.debug("init iCal Objects...");
                     addiCalObjects();
                 }
@@ -91,7 +91,7 @@ var adapter = utils.adapter({
 
         // Todo: remove hardcoded instance number from ical
         if (id == "ical.0.data.table") {
-            if (adapter.config.iCal) {
+            if (adapter.config.iCal == true) {
                 adapter.log.info("ical has changed, reload Data");
                 adapter.log.debug('stateChange ' + id + ' ' + JSON.stringify(state));
                 getData(function () {
