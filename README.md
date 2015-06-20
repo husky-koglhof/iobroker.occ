@@ -170,6 +170,7 @@ Folgende Logik muss für Homematic Schaltaktoren eingehalten werden
 - aktuelle ioBroker.hm-rpc
 - ioBroker.hmm (oder sonstiges Tool, um sich die Konfiguration am Objekt ansehen zu können)
 - ioBroker.web
+- ioBroker.iCal
 - es muss mind. ein hm-rpc mittels XML verfügbar sein, BIN ist nicht unterstützt (Getestet wurde nur der Homegear Daemon)
 
 ## Installation:
