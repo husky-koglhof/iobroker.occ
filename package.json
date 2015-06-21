@@ -1,7 +1,7 @@
 {
   "name": "iobroker.occ",
-  "version": "0.1.20",
-  "description": "Object Control Calendar for ioBroker",
+  "version": "0.1.21",
+  "description": "ObjectControlCalendar for ioBroker",
   "main": "main.js",
   "scripts": {
     "postinstall": "node postinstall.js"
@@ -21,7 +21,8 @@
     "homematic",
     "calendar",
     "fullcalendar",
-    "scheduler"
+    "scheduler",
+    "google calendar"
   ],
   "author": {
     "name": "husky-koglhof",
@@ -31,9 +32,5 @@
   "readmeFilename": "README.md",
   "bugs": {
     "url": "https://github.com/husky-koglhof/iobroker.occ/issues"
-  },
-  "gitHead": "5ff004a6d93fa6fed0c7b17bbe5c604a1dfff731",
-  "_id": "iobroker.occ@0.1.0",
-  "_shasum": "442f205080b5304491024da16dcc7cd2137af8e9",
-  "_from": "iobroker.occ@*"
+  }
 }

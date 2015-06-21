@@ -308,24 +308,42 @@ var adapter = utils.adapter({
     unload: function (callback) {
         try {
             adapter.log.info('cleaned everything up...');
-            callback();
+            //callback();
         } catch (e) {
             callback();
         }
 
+        /* Bugfix: Unload hm-rpc correct
+         try {
+         if (eventInterval) {
+         clearInterval(eventInterval);
+         eventInterval = null;
+         }
+
+         var protocol;
+         protocol = 'http://';
+         } catch (e) {
+         if (adapter && adapter.log) {
+         adapter.log.error("Error while unload of main.js: "+e);
+         } else {
+         console.log("Error while unload of main.js: "+e);
+         }
+         callback();
+         }
+         */
         try {
             if (eventInterval) {
                 clearInterval(eventInterval);
                 eventInterval = null;
             }
-
-            var protocol;
-            protocol = 'http://';
+            adapter.states.setState('system.adapter.' + adapter.namespace + '.connected', {val: false});
+            adapter.log.info("shutdown successfull");
+            callback();
         } catch (e) {
             if (adapter && adapter.log) {
-                adapter.log.error("Error while unload of main.js: "+e);
+                adapter.log.error(e);
             } else {
-                console.log("Error while unload of main.js: "+e);
+                console.log(e);
             }
             callback();
         }
@@ -405,47 +423,65 @@ function main() {
         instances = arr;
         for (var i = 0; i < arr.length; i++) {
             var native = arr[i].native;
-            var ccu = native.daemon;
-            var type = "BidCos-RF";
-            if (ccu == "Homegear") {
-                ccu = "true";
-            } else {
-                ccu = "false";
-                type = "";
+            var common = arr[i].common;
+            // Bugfix: only use hm-rpc Objects which are enabled
+            if (common.enabled == true) {
+                var ccu = native.daemon;
+                var type = native.type;
+                /*
+                 if (ccu == "Homegear") {
+                 ccu = "true";
+                 type = "xml"
+                 } else {
+                 ccu = "false";
+                 type = "bin";
+                 }
+                 */
+
+                var protocol;
+                if (type === 'bin') {
+                    protocol = 'xmlrpc_bin://';
+                } else {
+                    protocol = 'http://';
+                }
+
+                var name = arr[i]._id;
+                if (name.indexOf("system.adapter.") == 0) {
+                    name = name.substring(15, name.length);
+                }
+                //adapter.log.debug("name:"+name+", ip:"+native.homematicAddress+", type:"+type+", port:"+native.homematicPort+", isCcu:"+ccu);
+                adapter.log.info("name:"+name+", ip:"+native.homematicAddress+", type:"+type+", port:"+native.homematicPort);
+
+                // For each adress we have to start a rpc Connection
+                // name:hm-rpc.0, ip:192.168.1.8, type:BidCos-RF, port:2001, isCcu:true
+                var rpcClient;
+                rpcClient = rpc.createClient({
+                    host: native.homematicAddress,
+                    port: native.homematicPort,
+                    path: '/',
+                    clientPort: port,
+                });
+
+                // On First Startup, rpcServerStarted is always false
+                // if (!rpcServerStarted) initRpcServer(rpcClient);
+                initRpcServer(rpcClient, type);
+
+                //device = {name:name,ip:native.homematicAddress,type:type,port:native.homematicPort,isCcu:ccu,rpcClient:rpcClient,rpcServerStarted:true};
+                device = {name:name,ip:native.homematicAddress,type:type,port:native.homematicPort,rpcClient:rpcClient,rpcServerStarted:true};
+                homematicArray.push(device);
+
+                port++;
+                /*
+                 //rpcClient.methodCall('init', ['http://'+native.homematicAddress+':'+native.homematicPort, adapter.namespace], function (err, data) {
+                 rpcClient.methodCall('init', [protocol+adapter.config.rpcListenIp+':'+native.homematicPort, adapter.namespace], function (err, data) {
+                 //adapter.states.setState('system.adapter.' + adapter.namespace + '.connected', {val: false});
+                 adapter.log.debug("ERR: " + err);
+                 adapter.log.debug("DATA: " + JSON.stringify(data));
+                 // TODO: callback();
+
+                 });
+                 */
             }
-
-            var name = arr[i]._id;
-            if (name.indexOf("system.adapter.") == 0) {
-                name = name.substring(15, name.length);
-            }
-            adapter.log.debug("name:"+name+", ip:"+native.homematicAddress+", type:"+type+", port:"+native.homematicPort+", isCcu:"+ccu);
-
-            // For each adress we have to start a rpc Connection
-            // name:hm-rpc.0, ip:192.168.1.8, type:BidCos-RF, port:2001, isCcu:true
-            var rpcClient;
-            rpcClient = rpc.createClient({
-                host: native.homematicAddress,
-                port: native.homematicPort,
-                path: '/',
-                clientPort: port,
-            });
-
-            // On First Startup, rpcServerStarted is always false
-            // if (!rpcServerStarted) initRpcServer(rpcClient);
-            initRpcServer(rpcClient);
-
-            device = {name:name,ip:native.homematicAddress,type:type,port:native.homematicPort,isCcu:ccu,rpcClient:rpcClient,rpcServerStarted:true};
-            homematicArray.push(device);
-
-            port++;
-
-            rpcClient.methodCall('init', ['http://'+native.homematicAddress+':'+native.homematicPort, adapter.namespace], function (err, data) {
-                adapter.states.setState('system.adapter.' + adapter.namespace + '.connected', {val: false});
-                adapter.log.debug("ERR: " + err);
-                adapter.log.debug("DATA: " + JSON.stringify(data));
-                // TODO: callback();
-
-            });
         }
         adapter.log.debug("run loadData()");
         loadData();
@@ -495,155 +531,157 @@ function addiCalObjects() {
     var events = [];
     var event;
 
-    for (var i=0;i<res.val.length;i++) {
-        var ev = res.val[i];
+    if (res != undefined && res.val != undefined) {
+        for (var i=0;i<res.val.length;i++) {
+            var ev = res.val[i];
 
-        // New Event
-        event = new Object();
-        var ID = ev._IDID;
+            // New Event
+            event = new Object();
+            var ID = ev._IDID;
 
-        var IDID = ID;
-        var IDPARENT = ev._calName;
-        var IDTYPE = ev._class;
+            var IDID = ID;
+            var IDPARENT = ev._calName;
+            var IDTYPE = ev._class;
 
-        event.start = new Date(ev._date);
-        event.end = new Date(ev._end);
+            event.start = new Date(ev._date);
+            event.end = new Date(ev._end);
 
-        event.title = ev.event;
+            event.title = ev.event;
 
-        event.IDTYPE = IDTYPE;
-        event.IDPARENT = IDPARENT;
-        event.IDID = IDID;
+            event.IDTYPE = IDTYPE;
+            event.IDPARENT = IDPARENT;
+            event.IDID = IDID;
 
-        event.color = colors[colorPicker];
-        adapter.log.debug("ID: " + ID + " color: " + event.color);
-        event.allDay = ev._allDay;
-        event.id = event.title + "_" + ID;
+            event.color = colors[colorPicker];
+            adapter.log.debug("ID: " + ID + " color: " + event.color);
+            event.allDay = ev._allDay;
+            event.id = event.title + "_" + ID;
 
-        // Split ev.section (occ;LEQ0885447:1;true)
-        var state;
-        var elems = ev._section.split("#");
-        if (elems.length == 3 && elems[0] == "occ") {
-            event.section = elems[1];
-            state = elems[2];
-// *********************************************************
-            // Todo: Dummy Objects
-            event.repeater = "true";
-            var wk = 1;
-            var dateStart;
-            var editable;
+            // Split ev.section (occ;LEQ0885447:1;true)
+            var state;
+            var elems = ev._section.split("#");
+            if (elems.length == 3 && elems[0] == "occ") {
+                event.section = elems[1];
+                state = elems[2];
+                // *********************************************************
+                // Todo: Dummy Objects
+                event.repeater = "true";
+                var wk = 1;
+                var dateStart;
+                var editable;
 
-            // Create recurring Event
-            if (wk == 1) {
-                dateStart = event.start;
-                editable = true;
-                event.tooltip = "This is a recurring Event.";
-            } else {
-                editable = false;
-                event.title = event.title + " (Repeated Event)";
-                event.tooltip = "This is a recurring Event.\n\nThe original Event can be found at\n" + dateStart;
-            }
+                // Create recurring Event
+                if (wk == 1) {
+                    dateStart = event.start;
+                    editable = true;
+                    event.tooltip = "This is a recurring Event.";
+                } else {
+                    editable = false;
+                    event.title = event.title + " (Repeated Event)";
+                    event.tooltip = "This is a recurring Event.\n\nThe original Event can be found at\n" + dateStart;
+                }
 
-            event.editable = editable;
-            event.startEditable = editable;
-            event.durationEditable = editable;
-            // Todo: create recurring Events
-            var date = event.start;
+                event.editable = editable;
+                event.startEditable = editable;
+                event.durationEditable = editable;
+                // Todo: create recurring Events
+                var date = event.start;
 
-            var address;
+                var address;
 
-            var objectID = event.section.replace(":",".");
-            var obj;
+                var objectID = event.section.replace(":",".");
+                var obj;
 
-            if (states[objectID] != undefined) {
-                obj = objects[objectID];
-                adapter.log.info("Object found >>>>>> " + JSON.stringify(obj));
-                adapter.log.info(objectID + " is a real address, State found");
+                if (states[objectID] != undefined) {
+                    obj = objects[objectID];
+                    adapter.log.info("Object found >>>>>> " + JSON.stringify(obj));
+                    adapter.log.info(objectID + " is a real address, State found");
 
-                address = objectID;
-            } else {
-                // Todo: If we only knew the Name, we must check the Object Address
-                var objectName = event.section.replace(":", ".");
+                    address = objectID;
+                } else {
+                    // Todo: If we only knew the Name, we must check the Object Address
+                    var objectName = event.section.replace(":", ".");
 
-                for (var object in objects) {
-                    obj = objects[object];
-                    adapter.log.debug("---> " + obj._id);
-                    if (obj.common != undefined && obj.common.name != undefined) {
-                        if (obj.common.name == objectName || obj._id == objectName) {
-                            adapter.log.debug("Object found <<<<<< " + JSON.stringify(obj));
-                            address = obj._id;
-                            break;
+                    for (var object in objects) {
+                        obj = objects[object];
+                        adapter.log.debug("---> " + obj._id);
+                        if (obj.common != undefined && obj.common.name != undefined) {
+                            if (obj.common.name == objectName || obj._id == objectName) {
+                                adapter.log.debug("Object found <<<<<< " + JSON.stringify(obj));
+                                address = obj._id;
+                                break;
+                            }
                         }
                     }
                 }
-            }
-            event.IDTYPE = obj.native["PARENT_TYPE"];
-            if (event.IDTYPE == undefined) {
-                event.IDTYPE = obj.native["TypeName"]; // VARDP
-            }
-
-            // Todo: Check which Object Type
-            if (event.IDTYPE == "HM-LC-Sw2-FM" || event.IDTYPE == "HM-LC-Sw4-DR") {
-                if (state == "on") {
-                    event.switcher = true;
-                    state = true;
-                    event.typo = "switch";
-                } else if (state == "off") {
-                    event.switcher = false;
-                    state = false;
-                    event.typo = "switch";
+                event.IDTYPE = obj.native["PARENT_TYPE"];
+                if (event.IDTYPE == undefined) {
+                    event.IDTYPE = obj.native["TypeName"]; // VARDP
                 }
-                event.state = state;
-            } else if (event.IDTYPE == "VARDP") {
-                // Bugfix true | false comes as string so convert it to boolean
-                if (event.state == "true") {
-                    event.state = true;
-                } else if (event.state == "false") {
-                    event.state = false;
-                } else {
+
+                // Todo: Check which Object Type
+                if (event.IDTYPE == "HM-LC-Sw2-FM" || event.IDTYPE == "HM-LC-Sw4-DR") {
+                    if (state == "on") {
+                        event.switcher = true;
+                        state = true;
+                        event.typo = "switch";
+                    } else if (state == "off") {
+                        event.switcher = false;
+                        state = false;
+                        event.typo = "switch";
+                    }
                     event.state = state;
-                }
-                event.typo = obj.common.type;
-                event.valueType = obj.native.ValueType;
-            } // else TEMPERATURE
+                } else if (event.IDTYPE == "VARDP") {
+                    // Bugfix true | false comes as string so convert it to boolean
+                    if (event.state == "true") {
+                        event.state = true;
+                    } else if (event.state == "false") {
+                        event.state = false;
+                    } else {
+                        event.state = state;
+                    }
+                    event.typo = obj.common.type;
+                    event.valueType = obj.native.ValueType;
+                } // else TEMPERATURE
 
-            var scheduleName = address + "###" + event.start.getTime() + "###" + event.state;
+                var scheduleName = address + "###" + event.start.getTime() + "###" + event.state;
 
-            var job = new Object();
-            job.objectName = address;
-            job.scheduleName = scheduleName;
-            job.TYPE = event.IDTYPE;
-
-            // Create job for true and false
-            job.state = state;
-            job.time = event.start;
-            createScheduledJob(job);
-
-            // Todo: Check if Type is boolean
-            // If true, create two Jobs
-            // common.type boolean = VARDP, common.role switch = HM-LC-SW-FM
-            if (event.typo == "boolean" || event.typo == "switch") {
                 var job = new Object();
-                var scheduleName = address + "###" + event.end.getTime() + "###" + !state;
-
                 job.objectName = address;
                 job.scheduleName = scheduleName;
                 job.TYPE = event.IDTYPE;
 
                 // Create job for true and false
-                job.state = !state;
-                job.time = event.end;
+                job.state = state;
+                job.time = event.start;
                 createScheduledJob(job);
-            } // else TEMPERATURE
 
-            events.push(event);
-            adapter.log.debug("NEW START = " + event.start + " NEW END = " + event.end);
-            writeEventsToFile("#iCal", JSON.stringify(events));
-        } else {
-            adapter.log.error("No valid iCal Objects found, Description Text must be occ#OBJECT_ADDRESS#OBJECT_VALUE")
+                // Todo: Check if Type is boolean
+                // If true, create two Jobs
+                // common.type boolean = VARDP, common.role switch = HM-LC-SW-FM
+                if (event.typo == "boolean" || event.typo == "switch") {
+                    var job = new Object();
+                    var scheduleName = address + "###" + event.end.getTime() + "###" + !state;
+
+                    job.objectName = address;
+                    job.scheduleName = scheduleName;
+                    job.TYPE = event.IDTYPE;
+
+                    // Create job for true and false
+                    job.state = !state;
+                    job.time = event.end;
+                    createScheduledJob(job);
+                } // else TEMPERATURE
+
+                events.push(event);
+                adapter.log.debug("NEW START = " + event.start + " NEW END = " + event.end);
+                writeEventsToFile("#iCal", JSON.stringify(events));
+            } else {
+                adapter.log.error("No valid iCal Objects found, Description Text must be occ#OBJECT_ADDRESS#OBJECT_VALUE")
+            }
         }
+        writeEventsToFile("#iCal", JSON.stringify(events));
     }
-    writeEventsToFile("#iCal", JSON.stringify(events));
 }
 
 function createJob(objectName, event) {
@@ -726,9 +764,17 @@ function sendInit(initAddress, rpcClient) {
     });
 }
 
-function initRpcServer(rpcClient) {
+function initRpcServer(rpcClient, type) {
     //rpcServerStarted = true;
-    var protocol = 'http://';
+    var protocol;
+    if (adapter.config.type === 'bin') {
+        protocol = 'xmlrpc_bin://';
+    } else {
+        adapter.config.type = 'xml';
+        protocol = 'http://';
+    }
+
+
     // Todo: get Dynamically host and port;
     var clientPort = rpcClient['options']['clientPort'];
 
@@ -1310,3 +1356,4 @@ function parseEvents(jsonEvent, ID, type, parent) {
         }
     }
 }
+

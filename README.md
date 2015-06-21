@@ -6,6 +6,7 @@
 	- Einfach die Woche wechseln, dann werden die Daten angezeigt
 - Entkalkungszeitpunkt
 - Angehakte Elemente in der Select Options Maske bleiben bei Reload erhalten
+- hm-rpc Verbindungen
 
 ## Erweiterungen
 - Steuerung von allen State Objekten möglich

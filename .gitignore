@@ -3,3 +3,4 @@ www/lang/
 #www/lib/
 .idea
 tester.js
+www/_socket

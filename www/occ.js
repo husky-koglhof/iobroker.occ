@@ -43,6 +43,10 @@ function writeEventsToFile(event, eventID) {
     var jstrng = JSON.stringify(events);
     console.log(jstrng);
 
+    // Bugfix
+    if (eventID == "Object" || eventID == "iCal") {
+        eventID = "#"+eventID;
+    }
     servConn.writeFile('occ-events_'+eventID+'.json', jstrng, function () {
         console.log("file was written with" + JSON.stringify(jstrng));
     });

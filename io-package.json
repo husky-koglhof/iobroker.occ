@@ -1,9 +1,12 @@
 {
     "common": {
         "name":                     "occ",
-        "version":                  "0.1.20",
-        "title":                    "Node.js Object Control Calendar Adapter",
-        "desc":                     "Javascript/Node.js based Object Control Calendar adapter",
+        "version":                  "0.1.21",
+        "title":                    "ObjectControlCalendar Adapter",
+        "desc": {
+            "de": "Objekt Kontrolle in Webkalender mittels /Javascript/Node.js",
+            "en": "Javascript/Node.js based Object Control Calendar adapter"
+        },
         "platform":                 "Javascript/Node.js",
         "mode":                     "daemon",
         "icon":                     "logo.svg",
