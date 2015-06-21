@@ -14,7 +14,12 @@
         "dependencies":             ["web", "ical"],
         "readme":                   "https://github.com/husky-koglhof/iobroker.occ/blob/master/README.md",
         "onlyWWW":                  false,
-        "singleton":                true
+        "singleton":                true,
+        "adminTab":                {
+            "singleton":    true,
+            "name":         "OCC",
+            "link":         "http://%ip%:%web_port%/occ/index.html"
+        }
     },
     "native": {
         "rpcListenIp": "0.0.0.0",

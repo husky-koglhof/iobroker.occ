@@ -61,7 +61,7 @@ var adapter = utils.adapter({
             adapter.subscribeForeignObjects('*');
             adapter.subscribeForeignStates('*');
             main();
-            if (adapter.config.iCal == true) {
+            if (adapter.config.ical == true) {
                 adapter.log.debug("init iCal Objects...");
                 addiCalObjects();
             }
@@ -77,7 +77,7 @@ var adapter = utils.adapter({
             /* Todo Reload Data */
             getData(function () {
                 loadData();
-                if (adapter.config.iCal == true) {
+                if (adapter.config.ical == true) {
                     adapter.log.debug("init iCal Objects...");
                     addiCalObjects();
                 }
@@ -89,7 +89,7 @@ var adapter = utils.adapter({
 
         // Todo: remove hardcoded instance number from ical
         if (id == "ical.0.data.table") {
-            if (adapter.config.iCal == true) {
+            if (adapter.config.ical == true) {
                 adapter.log.info("ical has changed, reload Data");
                 adapter.log.debug('stateChange ' + id + ' ' + JSON.stringify(state));
                 getData(function () {
@@ -526,120 +526,122 @@ function addiCalObjects() {
         if (elems.length == 3 && elems[0] == "occ") {
             event.section = elems[1];
             state = elems[2];
-        }
 // *********************************************************
-        // Todo: Dummy Objects
-        event.repeater = "true";
-        var wk = 1;
-        var dateStart;
-        var editable;
+            // Todo: Dummy Objects
+            event.repeater = "true";
+            var wk = 1;
+            var dateStart;
+            var editable;
 
-        // Create recurring Event
-        if (wk == 1) {
-            dateStart = event.start;
-            editable = true;
-            event.tooltip = "This is a recurring Event.";
-        } else {
-            editable = false;
-            event.title = event.title + " (Repeated Event)";
-            event.tooltip = "This is a recurring Event.\n\nThe original Event can be found at\n" + dateStart;
-        }
+            // Create recurring Event
+            if (wk == 1) {
+                dateStart = event.start;
+                editable = true;
+                event.tooltip = "This is a recurring Event.";
+            } else {
+                editable = false;
+                event.title = event.title + " (Repeated Event)";
+                event.tooltip = "This is a recurring Event.\n\nThe original Event can be found at\n" + dateStart;
+            }
 
-        event.editable = editable;
-        event.startEditable = editable;
-        event.durationEditable = editable;
-        // Todo: create recurring Events
-        var date = event.start;
+            event.editable = editable;
+            event.startEditable = editable;
+            event.durationEditable = editable;
+            // Todo: create recurring Events
+            var date = event.start;
 
-        var address;
+            var address;
 
-        var objectID = event.section.replace(":",".");
-        var obj;
+            var objectID = event.section.replace(":",".");
+            var obj;
 
-        if (states[objectID] != undefined) {
-            obj = objects[objectID];
-            adapter.log.info("Object found >>>>>> " + JSON.stringify(obj));
-            adapter.log.info(objectID + " is a real address, State found");
+            if (states[objectID] != undefined) {
+                obj = objects[objectID];
+                adapter.log.info("Object found >>>>>> " + JSON.stringify(obj));
+                adapter.log.info(objectID + " is a real address, State found");
 
-            address = objectID;
-        } else {
-            // Todo: If we only knew the Name, we must check the Object Address
-            var objectName = event.section.replace(":", ".");
+                address = objectID;
+            } else {
+                // Todo: If we only knew the Name, we must check the Object Address
+                var objectName = event.section.replace(":", ".");
 
-            for (var object in objects) {
-                obj = objects[object];
-                adapter.log.debug("---> " + obj._id);
-                if (obj.common != undefined && obj.common.name != undefined) {
-                    if (obj.common.name == objectName || obj._id == objectName) {
-                        adapter.log.debug("Object found <<<<<< " + JSON.stringify(obj));
-                        address = obj._id;
-                        break;
+                for (var object in objects) {
+                    obj = objects[object];
+                    adapter.log.debug("---> " + obj._id);
+                    if (obj.common != undefined && obj.common.name != undefined) {
+                        if (obj.common.name == objectName || obj._id == objectName) {
+                            adapter.log.debug("Object found <<<<<< " + JSON.stringify(obj));
+                            address = obj._id;
+                            break;
+                        }
                     }
                 }
             }
-        }
-        event.IDTYPE = obj.native["PARENT_TYPE"];
-        if (event.IDTYPE == undefined) {
-            event.IDTYPE = obj.native["TypeName"]; // VARDP
-        }
-
-        // Todo: Check which Object Type
-        if (event.IDTYPE == "HM-LC-Sw2-FM" || event.IDTYPE == "HM-LC-Sw4-DR") {
-            if (state == "on") {
-                event.switcher = true;
-                state = true;
-                event.typo = "switch";
-            } else if (state == "off") {
-                event.switcher = false;
-                state = false;
-                event.typo = "switch";
+            event.IDTYPE = obj.native["PARENT_TYPE"];
+            if (event.IDTYPE == undefined) {
+                event.IDTYPE = obj.native["TypeName"]; // VARDP
             }
-            event.state = state;
-        } else if (event.IDTYPE == "VARDP") {
-            // Bugfix true | false comes as string so convert it to boolean
-            if (event.state == "true") {
-                event.state = true;
-            } else if (event.state == "false") {
-                event.state = false;
-            } else {
+
+            // Todo: Check which Object Type
+            if (event.IDTYPE == "HM-LC-Sw2-FM" || event.IDTYPE == "HM-LC-Sw4-DR") {
+                if (state == "on") {
+                    event.switcher = true;
+                    state = true;
+                    event.typo = "switch";
+                } else if (state == "off") {
+                    event.switcher = false;
+                    state = false;
+                    event.typo = "switch";
+                }
                 event.state = state;
-            }
-            event.typo = obj.common.type;
-            event.valueType = obj.native.ValueType;
-        } // else TEMPERATURE
+            } else if (event.IDTYPE == "VARDP") {
+                // Bugfix true | false comes as string so convert it to boolean
+                if (event.state == "true") {
+                    event.state = true;
+                } else if (event.state == "false") {
+                    event.state = false;
+                } else {
+                    event.state = state;
+                }
+                event.typo = obj.common.type;
+                event.valueType = obj.native.ValueType;
+            } // else TEMPERATURE
 
-        var scheduleName = address + "###" + event.start.getTime() + "###" + event.state;
+            var scheduleName = address + "###" + event.start.getTime() + "###" + event.state;
 
-        var job = new Object();
-        job.objectName = address;
-        job.scheduleName = scheduleName;
-        job.TYPE = event.IDTYPE;
-
-        // Create job for true and false
-        job.state = state;
-        job.time = event.start;
-        createScheduledJob(job);
-
-        // Todo: Check if Type is boolean
-        // If true, create two Jobs
-        // common.type boolean = VARDP, common.role switch = HM-LC-SW-FM
-        if (event.typo == "boolean" || event.typo == "switch") {
             var job = new Object();
-            var scheduleName = address + "###" + event.end.getTime() + "###" + !state;
-
             job.objectName = address;
             job.scheduleName = scheduleName;
             job.TYPE = event.IDTYPE;
 
             // Create job for true and false
-            job.state = !state;
-            job.time = event.end;
+            job.state = state;
+            job.time = event.start;
             createScheduledJob(job);
-        } // else TEMPERATURE
 
-        events.push(event);
-        adapter.log.debug("NEW START = " + event.start + " NEW END = " + event.end);
-        writeEventsToFile("#iCal", JSON.stringify(events));
+            // Todo: Check if Type is boolean
+            // If true, create two Jobs
+            // common.type boolean = VARDP, common.role switch = HM-LC-SW-FM
+            if (event.typo == "boolean" || event.typo == "switch") {
+                var job = new Object();
+                var scheduleName = address + "###" + event.end.getTime() + "###" + !state;
+
+                job.objectName = address;
+                job.scheduleName = scheduleName;
+                job.TYPE = event.IDTYPE;
+
+                // Create job for true and false
+                job.state = !state;
+                job.time = event.end;
+                createScheduledJob(job);
+            } // else TEMPERATURE
+
+            events.push(event);
+            adapter.log.debug("NEW START = " + event.start + " NEW END = " + event.end);
+            writeEventsToFile("#iCal", JSON.stringify(events));
+        } else {
+            adapter.log.error("No valid iCal Objects found, Description Text must be occ#OBJECT_ADDRESS#OBJECT_VALUE")
+        }
     }
     writeEventsToFile("#iCal", JSON.stringify(events));
 }
@@ -1308,4 +1310,3 @@ function parseEvents(jsonEvent, ID, type, parent) {
         }
     }
 }
-
