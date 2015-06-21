@@ -16,12 +16,12 @@ var host;
 var port;
 var colors = ["#A7194B","#FE2712","#FB9902","#FABC02","#FEFE33","#D0EA2B","#66B032","#0391CE","#0247FE","#3D01A5","#8601AF","#006600","#006699","#0066FF","#33FF00","#660066","#66FF99","#CC0066","#CCFFCC","#FF9966"];
 
+var rega =              {};
 var objects =           {};
 var states =            {};
 var scripts =           {};
 var subscriptions =     [];
 var enums =             [];
-var cacheObjectEnums =  {};
 var channels =          null;
 var devices =           null;
 var fs =                null;
@@ -30,12 +30,14 @@ var attempts =          {};
 function getData(callback) {
     var statesReady;
     var objectsReady;
+    var regaReady;
+
     adapter.log.info('requesting all states');
     adapter.getForeignStates('*', function (err, res) {
         states = res;
         statesReady = true;
         adapter.log.info('received all states');
-        if (objectsReady && typeof callback === 'function') callback();
+        if (objectsReady && regaReady && typeof callback === 'function') callback();
     });
     adapter.log.info('requesting all objects');
 
@@ -49,7 +51,23 @@ function getData(callback) {
 
         objectsReady = true;
         adapter.log.info('received all objects');
-        if (statesReady && typeof callback === 'function') callback();
+        if (statesReady && regaReady && typeof callback === 'function') callback();
+    });
+
+    // Workaround, only Uses Adapter which have no hm-rega instance
+    getAdapterInstances('hm-rega', function (arr) {
+        rega = {};
+        var instances = arr;
+        for (var i = 0; i < arr.length; i++) {
+            var native = arr[i].native;
+            var common = arr[i].common;
+            if (native.rfdAdapter != undefined) {
+                adapter.log.error("do not use this adapter: " + native.rfdAdapter);
+                rega[native.rfdAdapter] = common.name;
+            }
+        }
+        adapter.log.info('received all adapter instances');
+        if (statesReady && objectsReady && typeof callback === 'function') callback();
     });
 }
 
@@ -96,7 +114,7 @@ var adapter = utils.adapter({
                     addiCalObjects();
                 });
             }
-        } else if (state.ack != true) {
+        } else if (state.ack != undefined && state.ack != true) {
             adapter.log.debug('This stateChange is not acknowledged');
         } else {
             var objexts = id.split("###");
@@ -419,68 +437,50 @@ function main() {
 
     var device = {};
     var instances = {};
+
     getAdapterInstances('hm-rpc', function (arr) {
         instances = arr;
         for (var i = 0; i < arr.length; i++) {
             var native = arr[i].native;
             var common = arr[i].common;
-            // Bugfix: only use hm-rpc Objects which are enabled
-            if (common.enabled == true) {
-                var ccu = native.daemon;
-                var type = native.type;
-                /*
-                 if (ccu == "Homegear") {
-                 ccu = "true";
-                 type = "xml"
-                 } else {
-                 ccu = "false";
-                 type = "bin";
-                 }
-                 */
+            // Workaround: only use hm-rpc Instances which are not needed for hm-rega Instances
+            var _id = arr[i]._id.split("system.adapter.");
+            if (rega[_id[1]] != undefined) {
+                adapter.log.error("This Adapter will not be used: " + _id[1]);
+            } else {
+                // Bugfix: only use hm-rpc Instances which are enabled
+                if (common.enabled == true) {
+                    var ccu = native.daemon;
+                    var type = native.type;
 
-                var protocol;
-                if (type === 'bin') {
-                    protocol = 'xmlrpc_bin://';
-                } else {
-                    protocol = 'http://';
+                    var protocol;
+                    if (type === 'bin') {
+                        protocol = 'xmlrpc_bin://';
+                    } else {
+                        protocol = 'http://';
+                    }
+
+                    var name = arr[i]._id;
+                    if (name.indexOf("system.adapter.") == 0) {
+                        name = name.substring(15, name.length);
+                    }
+                    adapter.log.info("name:"+name+", ip:"+native.homematicAddress+", type:"+type+", port:"+native.homematicPort);
+
+                    var rpcClient;
+                    rpcClient = rpc.createClient({
+                        host: native.homematicAddress,
+                        port: native.homematicPort,
+                        path: '/',
+                        clientPort: port,
+                    });
+
+                    initRpcServer(rpcClient, type);
+
+                    device = {name:name,ip:native.homematicAddress,type:type,port:native.homematicPort,rpcClient:rpcClient,rpcServerStarted:true};
+                    homematicArray.push(device);
+
+                    port++;
                 }
-
-                var name = arr[i]._id;
-                if (name.indexOf("system.adapter.") == 0) {
-                    name = name.substring(15, name.length);
-                }
-                //adapter.log.debug("name:"+name+", ip:"+native.homematicAddress+", type:"+type+", port:"+native.homematicPort+", isCcu:"+ccu);
-                adapter.log.info("name:"+name+", ip:"+native.homematicAddress+", type:"+type+", port:"+native.homematicPort);
-
-                // For each adress we have to start a rpc Connection
-                // name:hm-rpc.0, ip:192.168.1.8, type:BidCos-RF, port:2001, isCcu:true
-                var rpcClient;
-                rpcClient = rpc.createClient({
-                    host: native.homematicAddress,
-                    port: native.homematicPort,
-                    path: '/',
-                    clientPort: port,
-                });
-
-                // On First Startup, rpcServerStarted is always false
-                // if (!rpcServerStarted) initRpcServer(rpcClient);
-                initRpcServer(rpcClient, type);
-
-                //device = {name:name,ip:native.homematicAddress,type:type,port:native.homematicPort,isCcu:ccu,rpcClient:rpcClient,rpcServerStarted:true};
-                device = {name:name,ip:native.homematicAddress,type:type,port:native.homematicPort,rpcClient:rpcClient,rpcServerStarted:true};
-                homematicArray.push(device);
-
-                port++;
-                /*
-                 //rpcClient.methodCall('init', ['http://'+native.homematicAddress+':'+native.homematicPort, adapter.namespace], function (err, data) {
-                 rpcClient.methodCall('init', [protocol+adapter.config.rpcListenIp+':'+native.homematicPort, adapter.namespace], function (err, data) {
-                 //adapter.states.setState('system.adapter.' + adapter.namespace + '.connected', {val: false});
-                 adapter.log.debug("ERR: " + err);
-                 adapter.log.debug("DATA: " + JSON.stringify(data));
-                 // TODO: callback();
-
-                 });
-                 */
             }
         }
         adapter.log.debug("run loadData()");
@@ -614,9 +614,11 @@ function addiCalObjects() {
                         }
                     }
                 }
-                event.IDTYPE = obj.native["PARENT_TYPE"];
-                if (event.IDTYPE == undefined) {
+
+                if (obj.native == undefined) {
                     event.IDTYPE = obj.native["TypeName"]; // VARDP
+                } else {
+                    event.IDTYPE = "VARDP";
                 }
 
                 // Todo: Check which Object Type
@@ -859,7 +861,7 @@ function getParamsets(objectID, paramType) {
     adapter.log.debug(objectID);
     // TODO: split objectID into <adaptername>.<instance>.<ID>.<CHANNEL>
     var objects = objectID.split(".");
-    adapter.log.info("getParamsets: "+objectID);
+    adapter.log.info("try to getParamset: "+objectID );
 
     var rpcClient;
     for (var i=0;i<homematicArray.length;i++) {
@@ -867,6 +869,7 @@ function getParamsets(objectID, paramType) {
         var hmrpc = objects[0]+'.'+objects[1];
         if (homematicArray[i].name == hmrpc) {
             var ID = objects[objects.length-2] + ":" + objects[objects.length-1];
+            adapter.log.info("getParamset for " + ID + " at " + hmrpc);
             rpcClient.methodCall('getParamset', [ID, paramType], function (err, data) {
                 if (!err) {
                     // TODO: get Type of Object (hm-cc-tc, hm-cc-rt-dn, ...)
