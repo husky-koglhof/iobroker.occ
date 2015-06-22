@@ -19,9 +19,9 @@
         "onlyWWW":                  false,
         "singleton":                true,
         "adminTab":                {
-            "singleton":    true,
-            "name":         "OCC",
-            "link":         "http://%ip%:%web_port%/occ/index.html"
+                "singleton":    true,
+                "name":         "OCC",
+                "link":         "http://%ip%:%web_port%/occ/index.html"
         }
     },
     "native": {
