@@ -18,6 +18,7 @@
         "readme":                   "https://github.com/husky-koglhof/iobroker.occ/blob/master/README.md",
         "onlyWWW":                  false,
         "singleton":                true,
+        "messagebox":               true,
         "adminTab":                {
                 "singleton":    true,
                 "name":         "OCC",
