@@ -1,5 +1,9 @@
 # iobroker.occ
 
+## ACHTUNG, FUNKTIONIERT NUR MIT HM-RPC >= 0.5.0
+   Muss mittels Link direkt installiert werden
+   (npm install https://github.com/ioBroker/ioBroker.hm-rpc/tarball/master --production)
+
 ## Bugfix
 - Startup Alert bei Initialladen / Reload des Kalenders.
 - Es kann zu keiner Anzeige nach Auswahl eines Geräts kommen
@@ -211,8 +215,6 @@ das Modul in ioBroker integriert ist.
 10.) Die Konfiguration von ioBroker.occ öffnen
 	RPC Listen IP: Die ioBroker IP Adresse eintragen
 	RPC Listen Port Begin: Der kleinste Listener Port für die hm-rpc Kommunikation, wird pro Instanz automatisch hochgezählt
-	Force objects re-init (once): Es werden alle Kalenderdaten von den Objekten eingelesen und am lokalen Dateisystem überschrieben
-	Async Save Mode: Derzeit nicht implementiert
 	Demo Mode (save back to object disabled): Es werden die Kalenderdaten nur am lokalen Dateisystem geschrieben, es findet keine Übertragung zu den Objekten statt
 
 11.) Starten von ioBroker.occ
@@ -227,6 +229,17 @@ das Modul in ioBroker integriert ist.
 
 ## Changelog
 
+### 0.2.0
+* (husky-koglhof)
+- Bugfix:
+	- Abhängigkeit zu hm-rpc rausgelöst, es wird nun hm-rpc mittels sendTo abgefragt.
+	- Entfernt: Force objects re-init (once): Es werden alle Kalenderdaten von den Objekten eingelesen und am lokalen Dateisystem überschrieben
+		- Es werden immer alle Daten beim Start neu geladen
+	- Entfernt: Async Save Mode: Derzeit nicht implementiert
+- Features:
+	- adminTab implementiert: ab Version ioBroker 0.7.0 erscheint occ als eigener Tab in der Oberfläche
+	- hm-rpc als Dependency in io-package.json hinzugefügt
+	
 ### 0.1.20
 * (husky-koglhof) 
 - Bugfix:

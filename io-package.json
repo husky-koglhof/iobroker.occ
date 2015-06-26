@@ -1,7 +1,7 @@
 {
     "common": {
         "name":                     "occ",
-        "version":                  "0.1.23",
+        "version":                  "0.2.0",
         "title":                    "ObjectControlCalendar Adapter",
         "desc": {
             "de": "Objekt Kontrolle in Webkalender mittels /Javascript/Node.js",
@@ -14,7 +14,7 @@
         "keywords":                 ["scheduler", "calendar", "fullcalendar", "object control", "homematic"],
         "loglevel":                 "info",
         "localLink":		        "http://%ip%:%web_port%/occ/index.html",
-        "dependencies":             ["web", "ical"],
+        "dependencies":             ["web", "ical", "hm-rpc"],
         "readme":                   "https://github.com/husky-koglhof/iobroker.occ/blob/master/README.md",
         "onlyWWW":                  false,
         "singleton":                true,
@@ -27,7 +27,6 @@
     "native": {
         "rpcListenIp": "0.0.0.0",
         "rpcListenPort": 1600,
-        "force": false,
         "demo": true,
         "ical": false
     },

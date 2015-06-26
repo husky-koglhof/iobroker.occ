@@ -24,20 +24,21 @@ var subscriptions =     [];
 var enums =             [];
 var channels =          null;
 var devices =           null;
-var fs =                null;
 var attempts =          {};
+var firstRun = 0;
+var allEvents = [];
+var colorPicker = 0;
 
 function getData(callback) {
     var statesReady;
     var objectsReady;
-    var regaReady;
 
     adapter.log.info('requesting all states');
     adapter.getForeignStates('*', function (err, res) {
         states = res;
         statesReady = true;
         adapter.log.info('received all states');
-        if (objectsReady && regaReady && typeof callback === 'function') callback();
+        if (objectsReady && typeof callback === 'function') callback();
     });
     adapter.log.info('requesting all objects');
 
@@ -51,23 +52,7 @@ function getData(callback) {
 
         objectsReady = true;
         adapter.log.info('received all objects');
-        if (statesReady && regaReady && typeof callback === 'function') callback();
-    });
-
-    // Workaround, only Uses Adapter which have no hm-rega instance
-    getAdapterInstances('hm-rega', function (arr) {
-        rega = {};
-        var instances = arr;
-        for (var i = 0; i < arr.length; i++) {
-            var native = arr[i].native;
-            var common = arr[i].common;
-            if (native.rfdAdapter != undefined) {
-                adapter.log.error("do not use this adapter: " + native.rfdAdapter);
-                rega[native.rfdAdapter] = common.name;
-            }
-        }
-        adapter.log.info('received all adapter instances');
-        if (statesReady && objectsReady && typeof callback === 'function') callback();
+        if (statesReady && typeof callback === 'function') callback();
     });
 }
 
@@ -78,7 +63,10 @@ var adapter = utils.adapter({
         getData(function () {
             adapter.subscribeForeignObjects('*');
             adapter.subscribeForeignStates('*');
-            main();
+
+            adapter.log.debug("run loadData()");
+            loadData();
+
             if (adapter.config.ical == true) {
                 adapter.log.debug("init iCal Objects...");
                 addiCalObjects();
@@ -86,13 +74,15 @@ var adapter = utils.adapter({
         });
 
     },
+    message: function (obj) {
+        adapter.log.error("MESSAGE arrived: " + JSON.stringify(obj));
+    },
     objectChange: function (id, object) {
         adapter.log.debug('objectChange ' + id + ' ' + JSON.stringify(object));
 
         if (id.search("enum.occ") == 0) {
             adapter.log.info("Enums has changed, reload Data from it...");
             adapter.log.debug('objectChange ' + id + ' ' + JSON.stringify(object));
-            /* Todo Reload Data */
             getData(function () {
                 loadData();
                 if (adapter.config.ical == true) {
@@ -103,8 +93,6 @@ var adapter = utils.adapter({
         }
     },
     stateChange: function (id, state) {
-        //adapter.log.debug('stateChange ' + id + ' ' + JSON.stringify(state));
-
         // Todo: remove hardcoded instance number from ical
         if (id == "ical.0.data.table") {
             if (adapter.config.ical == true) {
@@ -121,11 +109,25 @@ var adapter = utils.adapter({
             var action = objexts[1];
             var tmp = objexts[0].split('.');
 
-            var val = state.val;
             adapter.log.debug("--------------->"+state);
             adapter.log.debug('rpc -> setValue ' + id + ' ' + tmp[0] + ' ' + tmp[1] + ': ' + tmp[2] + ' ' + state.val);
 
             var array = state.val;
+
+            var TYPE;
+            var IDID;
+            var IDPARENT;
+
+            var end;
+            var start;
+            var ende;
+            var begin;
+            var objectName;
+            var allJobs;
+            var job;
+            var date;
+
+            var scheduleName = objectName+"###"+begin.getTime()+"###"+state;
 
             if (action == "submit") {
                 var paramset;
@@ -133,12 +135,10 @@ var adapter = utils.adapter({
                 // actual AUTO
                 paramset = {'MODE_TEMPERATUR_REGULATOR': 1};
 
-                // Todo: all events are within array
                 for (var i=0;i<array.length;i++) {
-                    var TYPE = array[i]['IDTYPE'];
-                    var ID = array[i]['IDID'];
-                    var PARENT = array[i]['IDPARENT']; // hm-rpc.0
-                    var TYPE = array[i]['IDTYPE']; // HM-TT-TC
+                    IDID = array[i]['IDID'];
+                    IDPARENT = array[i]['IDPARENT']; // hm-rpc.0
+                    TYPE = array[i]['IDTYPE']; // HM-TT-TC
 
                     if (TYPE == 'HM-CC-TC' || TYPE == "HM-CC-RT-DN" || TYPE == "BC-RT-TRX-CyG-3") {
                         var temperature = array[i]['temperature']; // 17
@@ -153,7 +153,7 @@ var adapter = utils.adapter({
                             // TEMPERATUR_MONDAY_0 = TEMPERATUR_SUNDAY_???
                         }
 
-                        var end = array[i]['end'];
+                        end = array[i]['end'];
                         var x = new Date(end);
                         var hours = x.getHours();
                         var min = x.getMinutes();
@@ -175,23 +175,22 @@ var adapter = utils.adapter({
                     }
                 }
                 adapter.log.debug(JSON.stringify(paramset));
-                putParamsets(PARENT+"."+ID, paramset);
+                putParamsets(IDPARENT+"."+ID, paramset);
             } else if (action == "save") {
-                var TYPE = array['IDTYPE'];
-                var IDPARENT = array['IDPARENT'];
-                var IDID = array['IDID'];
+                TYPE = array['IDTYPE'];
+                IDPARENT = array['IDPARENT'];
+                IDID = array['IDID'];
                 if (TYPE == 'HM-LC-Sw2-FM' || TYPE == "HM-LC-Sw4-DR") {
-                    var now = new Date();
-                    var start = array['start'];
-                    var ende = array['end'];
-                    var begin = new Date(start);
-                    var end = new Date(ende);
-                    var objectName = IDID;
-                    var state = array['switcher'];
+                    start = array['start'];
+                    ende = array['end'];
+                    begin = new Date(start);
+                    end = new Date(ende);
+                    objectName = IDID;
+                    state = array['switcher'];
 
-                    var scheduleName = objectName+"###"+begin.getTime()+"###"+state;
+                    scheduleName = objectName+"###"+begin.getTime()+"###"+state;
 
-                    var job = new Object();
+                    job = new Object();
                     job.objectName = objectName;
                     job.scheduleName = scheduleName;
                     job.TYPE = TYPE;
@@ -201,9 +200,9 @@ var adapter = utils.adapter({
                     createScheduledJob(job);
 
                     // Create job for true and false
-                    var scheduleName = objectName+"###"+end.getTime()+"###"+!state;
+                    scheduleName = objectName+"###"+end.getTime()+"###"+!state;
 
-                    var job = new Object();
+                    job = new Object();
                     job.objectName = objectName;
                     job.scheduleName = scheduleName;
 
@@ -212,16 +211,14 @@ var adapter = utils.adapter({
                     job.time = end;
                     createScheduledJob(job);
                 } else if (TYPE == 'VARDP') {
-                    var now = new Date();
-                    var start = array['start'];
-                    var ende = array['end'];
-                    var begin = new Date(start);
-                    var end = new Date(ende);
-                    var objectName = IDID;
+                    start = array['start'];
+                    ende = array['end'];
+                    begin = new Date(start);
+                    end = new Date(ende);
+                    objectName = IDID;
                     var address;
 
-                    var state = array['state'];
-                    // Todo: if Object is original from Google Calendar, then the IDID is a google ID
+                    state = array['state'];
                     // So go on and find the correct Object
                     if (IDPARENT == "google") {
                         objectName = array['section'];
@@ -241,9 +238,9 @@ var adapter = utils.adapter({
 
                             }
                             if (cr) {
-                                var scheduleName = address + "###" + begin.getTime() + "###" + state;
+                                scheduleName = address + "###" + begin.getTime() + "###" + state;
 
-                                var job = new Object();
+                                job = new Object();
                                 job.objectName = address;
                                 job.scheduleName = scheduleName;
                                 job.TYPE = TYPE;
@@ -253,11 +250,10 @@ var adapter = utils.adapter({
                                 job.time = begin;
                                 createScheduledJob(job);
 
-                                // Todo: Check if Type is boolean
                                 // If true, create two Jobs
                                 if (obj.common.type == "boolean") {
-                                    var job = new Object();
-                                    var scheduleName = address + "###" + end.getTime() + "###" + !state;
+                                    job = new Object();
+                                    scheduleName = address + "###" + end.getTime() + "###" + !state;
 
                                     job.objectName = address;
                                     job.scheduleName = scheduleName;
@@ -273,34 +269,32 @@ var adapter = utils.adapter({
                         }
                         /* ****************************************************** */
                     } else {
-                        var scheduleName = objectName + "###" + begin.getTime() + "###" + state;
+                        scheduleName = objectName + "###" + begin.getTime() + "###" + state;
 
-                        var job = new Object();
+                        job = new Object();
                         job.objectName = objectName;
                         job.scheduleName = scheduleName;
                         job.TYPE = TYPE;
 
-                        // Todo: Create job if true or false
                         job.state = state;
                         job.time = begin;
                         createScheduledJob(job);
                     }
                 }
             } else if (action == "delete") {
-                // Todo: Delete Job from scheduler
-                var TYPE = array['IDTYPE']; // HM-TT-TC
-                var IDPARENT = array['IDPARENT'];
-                var IDID = array['IDID'];
+                TYPE = array['IDTYPE']; // HM-TT-TC
+                IDPARENT = array['IDPARENT'];
+                IDID = array['IDID'];
                 if (TYPE == 'HM-LC-Sw2-FM' || TYPE == "HM-LC-Sw4-DR") {
 
                     IDID = IDID.replace(".", ":");
-                    var objectName = IDPARENT + "." + IDID;
+                    objectName = IDPARENT + "." + IDID;
 
-                    var state = array['switcher'];
+                    state = array['switcher'];
 
-                    var allJobs = schedule['scheduledJobs'];
-                    var date = new Date(array['start']);
-                    var scheduleName = objectName + "###" + date.getTime() + "###" + state;
+                    allJobs = schedule['scheduledJobs'];
+                    date = new Date(array['start']);
+                    scheduleName = objectName + "###" + date.getTime() + "###" + state;
 
                     if (allJobs[scheduleName] != undefined) {
                         adapter.log.debug("Cancel Job: " + scheduleName);
@@ -309,8 +303,8 @@ var adapter = utils.adapter({
                         adapter.log.debug("Job: " + scheduleName + " does not exists, do nothing");
                     }
 
-                    var date = new Date(array['end']);
-                    var scheduleName = objectName + "###" + date.getTime() + "###" + !state;
+                    date = new Date(array['end']);
+                    scheduleName = objectName + "###" + date.getTime() + "###" + !state;
 
                     if (allJobs[scheduleName] != undefined) {
                         adapter.log.debug("Cancel Job: " + scheduleName);
@@ -326,43 +320,8 @@ var adapter = utils.adapter({
     unload: function (callback) {
         try {
             adapter.log.info('cleaned everything up...');
-            //callback();
-        } catch (e) {
-            callback();
-        }
-
-        /* Bugfix: Unload hm-rpc correct
-         try {
-         if (eventInterval) {
-         clearInterval(eventInterval);
-         eventInterval = null;
-         }
-
-         var protocol;
-         protocol = 'http://';
-         } catch (e) {
-         if (adapter && adapter.log) {
-         adapter.log.error("Error while unload of main.js: "+e);
-         } else {
-         console.log("Error while unload of main.js: "+e);
-         }
-         callback();
-         }
-         */
-        try {
-            if (eventInterval) {
-                clearInterval(eventInterval);
-                eventInterval = null;
-            }
-            adapter.states.setState('system.adapter.' + adapter.namespace + '.connected', {val: false});
-            adapter.log.info("shutdown successfull");
             callback();
         } catch (e) {
-            if (adapter && adapter.log) {
-                adapter.log.error(e);
-            } else {
-                console.log(e);
-            }
             callback();
         }
     }
@@ -401,126 +360,33 @@ function createScheduledJob(job) {
     }
 }
 
-var rpc = require('homematic-xmlrpc');
-var rpcServer;
-var eventInterval;
-var rpcInitString = null;
-var homematicArray = [];
-
-function getAdapterInstances(_adapter, callback) {
-    if (typeof _adapter == 'function') {
-        callback = _adapter;
-        _adapter = null;
-    }
-
-    adapter.objects.getObjectView('system', 'instance', {startkey: 'system.adapter.' + (_adapter || adapter), endkey: 'system.adapter.' + (_adapter || adapter) + '.\u9999'}, function (err, doc) {
-        if (err) {
-            if (callback) callback ([]);
-        } else {
-            if (doc.rows.length === 0) {
-                if (callback) callback ([]);
-            } else {
-                var res = [];
-                for (var i = 0; i < doc.rows.length; i++) {
-                    res.push(doc.rows[i].value);
-                }
-                if (callback) callback (res);
-            }
-        }
-
-    });
-}
-
-function main() {
-    var host = adapter.config.rpcListenIp;
-    var port = adapter.config.rpcListenPort;
-
-    var device = {};
-    var instances = {};
-
-    getAdapterInstances('hm-rpc', function (arr) {
-        instances = arr;
-        for (var i = 0; i < arr.length; i++) {
-            var native = arr[i].native;
-            var common = arr[i].common;
-            // Workaround: only use hm-rpc Instances which are not needed for hm-rega Instances
-            var _id = arr[i]._id.split("system.adapter.");
-            if (rega[_id[1]] != undefined) {
-                adapter.log.error("This Adapter will not be used: " + _id[1]);
-            } else {
-                // Bugfix: only use hm-rpc Instances which are enabled
-                if (common.enabled == true) {
-                    var ccu = native.daemon;
-                    var type = native.type;
-
-                    var protocol;
-                    if (type === 'bin') {
-                        protocol = 'xmlrpc_bin://';
-                    } else {
-                        protocol = 'http://';
-                    }
-
-                    var name = arr[i]._id;
-                    if (name.indexOf("system.adapter.") == 0) {
-                        name = name.substring(15, name.length);
-                    }
-                    adapter.log.info("name:"+name+", ip:"+native.homematicAddress+", type:"+type+", port:"+native.homematicPort);
-
-                    var rpcClient;
-                    rpcClient = rpc.createClient({
-                        host: native.homematicAddress,
-                        port: native.homematicPort,
-                        path: '/',
-                        clientPort: port,
-                    });
-
-                    initRpcServer(rpcClient, type);
-
-                    device = {name:name,ip:native.homematicAddress,type:type,port:native.homematicPort,rpcClient:rpcClient,rpcServerStarted:true};
-                    homematicArray.push(device);
-
-                    port++;
-                }
-            }
-        }
-        adapter.log.debug("run loadData()");
-        loadData();
-    });
-}
-
 function loadData() {
-    if (adapter.config.force) {
-        var e = "enum.occ.";
-        for (var i=0; i<enums.length; i++) {
-            var enu = enums[i];
-            if (enu.search(e) == 0) {
-                var res = objects[enu];
+    var e = "enum.occ.";
+    for (var i=0; i<enums.length; i++) {
+        var enu = enums[i];
+        if (enu.search(e) == 0) {
+            var res = objects[enu];
 
-                adapter.log.debug("Adapter getEnum: "+JSON.stringify(res));
-                adapter.log.debug("Adapter getEnum Result: "+res);
+            adapter.log.debug("Adapter getEnum: "+JSON.stringify(res));
+            adapter.log.debug("Adapter getEnum Result: "+res);
 
-                adapter.log.debug("EnumGroup: "+res['common'].name);
-                var len = res['common'].members.length;
-                for (var l = 0; l < len; l++) {
-                    var member = res['common'].members[l];
+            adapter.log.debug("EnumGroup: "+res['common'].name);
+            var len = res['common'].members.length;
+            for (var l = 0; l < len; l++) {
+                var member = res['common'].members[l];
 
-                    var localObject = objects[member];
-                    adapter.log.debug(JSON.stringify(localObject));
+                var localObject = objects[member];
+                adapter.log.debug(JSON.stringify(localObject));
 
-                    adapter.log.debug("Member: " + member);
-                    // Todo: check member, if it is an hm-rpc address, or an hm-rega, or script or something else
-                    if (states[member] == undefined) {
-                        getParamsets(member, 'MASTER');
-                    }
+                adapter.log.debug("Member: " + member);
+                if (states[member] == undefined) {
+                    getParamsets(member, 'MASTER');
                 }
             }
         }
-
-        writeEventsToFile("#Object", "");
     }
-}
-function isFloat(n) {
-    return n === +n && n !== (n|0);
+
+    writeEventsToFile("#Object", "");
 }
 
 function addiCalObjects() {
@@ -585,7 +451,6 @@ function addiCalObjects() {
                 event.startEditable = editable;
                 event.durationEditable = editable;
                 // Todo: create recurring Events
-                var date = event.start;
 
                 var address;
 
@@ -599,7 +464,7 @@ function addiCalObjects() {
 
                     address = objectID;
                 } else {
-                    // Todo: If we only knew the Name, we must check the Object Address
+                    // If we only knew the Name, we must check the Object Address
                     var objectName = event.section.replace(":", ".");
 
                     for (var object in objects) {
@@ -621,7 +486,6 @@ function addiCalObjects() {
                     event.IDTYPE = "VARDP";
                 }
 
-                // Todo: Check which Object Type
                 if (event.IDTYPE == "HM-LC-Sw2-FM" || event.IDTYPE == "HM-LC-Sw4-DR") {
                     if (state == "on") {
                         event.switcher = true;
@@ -646,9 +510,9 @@ function addiCalObjects() {
                     event.valueType = obj.native.ValueType;
                 } // else TEMPERATURE
 
-                var scheduleName = address + "###" + event.start.getTime() + "###" + event.state;
+                scheduleName = address + "###" + event.start.getTime() + "###" + event.state;
 
-                var job = new Object();
+                job = new Object();
                 job.objectName = address;
                 job.scheduleName = scheduleName;
                 job.TYPE = event.IDTYPE;
@@ -658,9 +522,7 @@ function addiCalObjects() {
                 job.time = event.start;
                 createScheduledJob(job);
 
-                // Todo: Check if Type is boolean
                 // If true, create two Jobs
-                // common.type boolean = VARDP, common.role switch = HM-LC-SW-FM
                 if (event.typo == "boolean" || event.typo == "switch") {
                     var job = new Object();
                     var scheduleName = address + "###" + event.end.getTime() + "###" + !state;
@@ -686,129 +548,8 @@ function addiCalObjects() {
     }
 }
 
-function createJob(objectName, event) {
-    // Todo: Check if this Job already exists
-    var allJobs = schedule['scheduledJobs'];
-    var now = new Date();
-
-    if (event.state != undefined) {
-        var scheduleName = objectName + "###" + event.start.getTime() + "###" + event.state;
-
-        var job = new Object();
-        job.objectName = objectName;
-        job.scheduleName = scheduleName;
-        job.TYPE = event.IDTYPE;
-
-        // Create job for true and false
-        job.state = event.state;
-        job.time = event.start;
-        createScheduledJob(job);
-    } else {
-        var scheduleName = objectName + "###" + event.start.getTime() + "###" + event.switcher;
-
-        var job = new Object();
-        job.objectName = objectName;
-        job.scheduleName = scheduleName;
-        job.TYPE = event.IDTYPE;
-
-        // Create job for true and false
-        job.state = event.switcher;
-        job.time = event.start;
-        createScheduledJob(job);
-
-        scheduleName = objectName+"###"+event.end.getTime()+"###"+!event.switcher;
-        job.scheduleName = scheduleName;
-        job.state = !event.switcher;
-        job.time = event.end;
-        createScheduledJob(job);
-    }
-}
-
-function getIPs(host, callback) {
-    if (typeof host == 'function') {
-        callback = host;
-        host = null;
-    }
-
-    socket.emit('getHostByIp', host || common.host, function (ip, _host) {
-        if (_host) {
-            host = _host;
-            var IPs4 = [{name: '[IPv4] 0.0.0.0', address: '0.0.0.0', family: 'ipv4'}];
-            var IPs6 = [{name: '[IPv6] ::',      address: '::',      family: 'ipv6'}];
-            if (host.native.hardware && host.native.hardware.networkInterfaces) {
-                for (var eth in host.native.hardware.networkInterfaces) {
-                    for (var num = 0; num < host.native.hardware.networkInterfaces[eth].length; num++) {
-                        if (host.native.hardware.networkInterfaces[eth][num].family != "IPv6") {
-                            IPs4.push({name: '[' + host.native.hardware.networkInterfaces[eth][num].family + '] ' + host.native.hardware.networkInterfaces[eth][num].address + ' - ' + eth, address: host.native.hardware.networkInterfaces[eth][num].address, family: 'ipv4'});
-                        } else {
-                            IPs6.push({name: '[' + host.native.hardware.networkInterfaces[eth][num].family + '] ' + host.native.hardware.networkInterfaces[eth][num].address + ' - ' + eth, address: host.native.hardware.networkInterfaces[eth][num].address, family: 'ipv6'});
-                        }
-                    }
-                }
-            }
-            for (var i = 0; i < IPs6.length; i++) {
-                IPs4.push(IPs6[i]);
-            }
-            callback(IPs4);
-        }
-    });
-}
-
-function sendInit(initAddress, rpcClient) {
-    if (initAddress) rpcInitString = initAddress;
-
-    rpcClient.methodCall('init', [rpcInitString, adapter.namespace], function (err, data) {
-        if (!err) {
-            connection(rpcClient);
-        } else {
-            adapter.log.error("sendInit Error: "+err + "(" + rpcInitString + ")");
-        }
-    });
-}
-
-function initRpcServer(rpcClient, type) {
-    //rpcServerStarted = true;
-    var protocol;
-    if (adapter.config.type === 'bin') {
-        protocol = 'xmlrpc_bin://';
-    } else {
-        adapter.config.type = 'xml';
-        protocol = 'http://';
-    }
-
-
-    // Todo: get Dynamically host and port;
-    var clientPort = rpcClient['options']['clientPort'];
-
-    // Todo: function getIPs(host, callback) ...
-    rpcServer = rpc.createServer({host: adapter.config.rpcListenIp, port: clientPort});
-    sendInit(protocol + adapter.config.rpcListenIp+":"+clientPort, rpcClient);
-
-    rpcServer.on('event', function (err, params, callback) {
-        adapter.log.debug("rpcServer event: "+params);
-        connection(rpcClient);
-        callback(null, methods.event(err, params));
-    });
-
-    rpcServer.on('system.multicall', function (method, params, callback) {
-        adapter.log.debug("rpcServer system.multicall: "+JSON.stringify(params));
-        connection(rpcClient);
-        var response = [];
-        for (var i = 0; i < params[0].length; i++) {
-            if (methods[params[0][i].methodName]) {
-                response.push(methods[params[0][i].methodName](null, params[0][i].params));
-            } else {
-                response.push('');
-            }
-        }
-        callback(null, response);
-    });
-}
-
 var methods = {
-
     event: function (err, params) {
-        // Todo: Write Objects in Queue
         adapter.config.type = "xml";
         adapter.log.debug(adapter.config.type + 'rpc <- event ' + JSON.stringify(params));
         //adapter.log.debug("PARAM 2 = " + params[2]);
@@ -819,114 +560,75 @@ var methods = {
             } else {
                 adapter.log.info("CONFIG PENDING DONE FOR " + params[1]);
                 adapter.log.info("Reload Objects");
-                // Todo: Reload Objects from params[1];
                 var objectID = params[0] +"." + params[1].replace(':0', '.2');
-                // params0 = occ.0
-                // params1 = JEQ0550466:0
-                // params2 = CONFIG_PENDING
-                // params3 = false
                 getParamsets(objectID, 'MASTER');
             }
         }
     }
 };
 
-function connection(rpcClient) {
-    var now = (new Date()).getTime();
-    // do not send ofter than 5 seconds
-    if (!lastEvent || now - lastEvent > 5000) {
-        adapter.states.setState('system.adapter.' + adapter.namespace + '.connected', {val: true, expire: 300});
-    }
-
-    lastEvent = (new Date()).getTime();
-
-    if (!eventInterval) {
-        eventInterval = setInterval(function () {
-            var _now = (new Date()).getTime();
-            // Check last event time
-            if (lastEvent && _now - lastEvent > checkInitInterval * 1000) {
-                // Reinit !!!
-                sendInit(null, rpcClient);
-            }
-        }, checkInitInterval * 1000);
-    }
-}
-var lastEvent =     0;
-var checkInitInterval = 60;
-
 function getParamsets(objectID, paramType) {
-    adapter.log.debug(rpcInitString);
     adapter.log.debug(adapter.namespace);
     adapter.log.debug(objectID);
-    adapter.log.debug(objectID);
-    // TODO: split objectID into <adaptername>.<instance>.<ID>.<CHANNEL>
-    var objects = objectID.split(".");
+    var objectsID = objectID.split(".");
     adapter.log.info("try to getParamset: "+objectID );
 
-    var rpcClient;
-    for (var i=0;i<homematicArray.length;i++) {
-        rpcClient = homematicArray[i].rpcClient;
-        var hmrpc = objects[0]+'.'+objects[1];
-        if (homematicArray[i].name == hmrpc) {
-            var ID = objects[objects.length-2] + ":" + objects[objects.length-1];
-            adapter.log.info("getParamset for " + ID + " at " + hmrpc);
-            rpcClient.methodCall('getParamset', [ID, paramType], function (err, data) {
-                if (!err) {
-                    // TODO: get Type of Object (hm-cc-tc, hm-cc-rt-dn, ...)
-                    var parent = objects[0]+"."+objects[1];
-                    var objID = parent+"."+objects[objects.length-2];
-                    adapter.log.debug("############### " + objID);
-                    adapter.objects.getObject(objID, function (err, res) {
-                        var type;
-                        if (res && res.native) {
-                            type = res.native["TYPE"];
-                        }
+    var ID = objectsID[objectsID.length-2] + ":" + objectsID[objectsID.length-1];
+    var instance = objectsID[0] + "." + objectsID[1];
 
-                        if (type == "HM-CC-TC" || type == "HM-CC-RT-DN") {
-                            parseEvents(data, ID, type, parent);
-                            parseDecalc(data, ID, type, parent);
-                            colorPicker = colorPicker + 1;
-                            adapter.log.debug("COLORPICKER" + colorPicker);
-                            //writeEventsToFile(ID, JSON.stringify(allEvents));
-                            var myID = parent+"."+ID;
-                            adapter.log.debug("----------> " + myID + "(" + type + ")");
-                            writeEventsToFile(myID, JSON.stringify(allEvents));
-                            allEvents = [];
-                        } else if (type == "BC-RT-TRX-CyG-3") {
-                            var channel = ID.split(":");
-                            if (channel[1] == 0) {
-                                parseEvents(data, ID, type, parent);
-                                var dID = hmrpc + "." + ID.replace(":0", ".1");
-                                getParamsets(dID, 'VALUES');
-                            } else {
-                                // parseDecalc is not working for MAX! cause DECALC Objects are within Channel 1
-                                parseDecalc(data, ID, type, parent);
-                            }
+    adapter.sendTo(instance, "getParamset", {ID:ID, paramType:paramType}, function (doc) {
+        var err = doc.error;
+        var data = doc.result;
+        adapter.log.info("data = " + JSON.stringify(data));
+        adapter.log.info("err  = " + JSON.stringify(err));
 
-                            if (channel[1] == 0) {
-                                colorPicker = colorPicker + 1;
-                                adapter.log.debug("COLORPICKER" + colorPicker);
-                                //writeEventsToFile(ID, JSON.stringify(allEvents));
-                                var myID = parent+"."+ID;
-                                adapter.log.debug("----------> " + myID + "(" + type + ")");
-                                writeEventsToFile(myID, JSON.stringify(allEvents));
-                                allEvents = [];
-                            }
-                        } else if (type == "HM-LC-Sw2-FM" || type == "HM-LC-Sw4-DR") {
-                            parseScheduler(parent, ID);
-                        }
-                    });
+        if (!err) {
+            var parent = objectsID[0]+"."+objectsID[1];
+            var objID = parent+"."+objectsID[objectsID.length-2];
+            adapter.log.debug("############### " + objID);
+            var res = objects[objID];
+            var type;
+            if (res && res.native) {
+                type = res.native["TYPE"];
+            }
+            var myID;
+
+            if (type == "HM-CC-TC" || type == "HM-CC-RT-DN") {
+                parseEvents(data, ID, type, parent);
+                parseDecalc(data, ID, type, parent);
+                colorPicker = colorPicker + 1;
+                adapter.log.debug("COLORPICKER" + colorPicker);
+                myID = parent+"."+ID;
+                adapter.log.debug("----------> " + myID + "(" + type + ")");
+                writeEventsToFile(myID, JSON.stringify(allEvents));
+                allEvents = [];
+            } else if (type == "BC-RT-TRX-CyG-3") {
+                var channel = ID.split(":");
+                if (channel[1] == 0) {
+                    parseEvents(data, ID, type, parent);
+                    var dID = parent + "." + ID.replace(":0", ".1");
+                    getParamsets(dID, 'VALUES');
                 } else {
-                    adapter.log.error("getParamset Error: "+err);
+                    // parseDecalc is not working for MAX! cause DECALC Objects are within Channel 1
+                    parseDecalc(data, ID, type, parent);
                 }
-            });
-        } else {
-//            adapter.log.error("not defined " + objectID + " " + paramType);
-        }
-    }
-}
 
-var firstRun = 0;
+                if (channel[1] == 0) {
+                    colorPicker = colorPicker + 1;
+                    adapter.log.debug("COLORPICKER" + colorPicker);
+                    myID = parent+"."+ID;
+                    adapter.log.debug("----------> " + myID + "(" + type + ")");
+                    writeEventsToFile(myID, JSON.stringify(allEvents));
+                    allEvents = [];
+                }
+            } else if (type == "HM-LC-Sw2-FM" || type == "HM-LC-Sw4-DR") {
+                parseScheduler(parent, ID);
+            }
+        } else {
+            adapter.log.error("getParamset Error: "+err);
+        }
+    });
+}
 
 function readEventsFromFile(ID, callback) {
     ID = ID.replace(":",".");
@@ -959,26 +661,23 @@ function writeEventsToFile(ID, event) {
 
 function putParamsets(address, params) {
     if (!adapter.config.demo) {
-        var objects = address.split(".");
-        var ID = objects[objects.length-1];
+        var objectsID = address.split(".");
+        var ID = objectsID[objectsID.length - 1];
+        var paramType = "MASTER";
+        var instance = objectsID[0] + "." + objectsID[1];
 
-        var rpcClient;
-        for (var i=0;i<homematicArray.length;i++) {
-            rpcClient = homematicArray[i].rpcClient;
-            var hmrpc = objects[0] + '.' + objects[1];
-            if (homematicArray[i].name == hmrpc) {
-                adapter.log.debug("putParamset params: "+params);
+        adapter.sendTo(instance, "putParamset", {ID: ID, paramType: paramType, params: params}, function (doc) {
+            var err = doc.error;
+            var data = doc.result;
+            adapter.log.info("data = " + JSON.stringify(data));
+            adapter.log.info("err  = " + JSON.stringify(err));
 
-                rpcClient.methodCall('putParamset', [ID, 'MASTER', params], function (err, data) {
-                    if (!err) {
-                        adapter.log.info("putParamset was successfull for "+ID);
-                    } else {
-                        adapter.log.error("putParamset Error: " + err);
-                    }
-                });
-
+            if (!err) {
+                adapter.log.info("putParamset was successfull for " + ID);
+            } else {
+                adapter.log.error("putParamset Error: " + err);
             }
-        }
+        });
     }
 }
 
@@ -991,69 +690,57 @@ function changeState(address, params) {
 
 function change_hmrpc_State(address, params) {
     if (!adapter.config.demo) {
-        var objects = address.split(".");
+        var objectsID = address.split(".");
         // Bug: if objects has : then to nothing
         var ID;
-        if (objects[2].search(":") < 0) {
-            ID = objects[2] + ":" + objects[3];
+        if (objectsID[2].search(":") < 0) {
+            ID = objectsID[2] + ":" + objectsID[3];
         } else {
-            ID = objects[2];
+            ID = objectsID[2];
         }
         adapter.log.info("change_hmrpc_State for " + ID + " params " + params);
 
-        var rpcClient;
-        for (var i=0;i<homematicArray.length;i++) {
-            rpcClient = homematicArray[i].rpcClient;
-            var hmrpc = objects[0] + '.' + objects[1];
-            if (homematicArray[i].name == hmrpc) {
-                rpcClient.methodCall('setValue', [ID, 'STATE', params], function (err, data) {
-                    if (!err) {
-                        adapter.log.info("change_hmrpc_State was successfull for "+ID);
-                        adapter.log.debug(JSON.stringify(data));
-                    } else {
-                        adapter.log.error("change_hmrpc_State Error: " + err);
-                    }
-                });
+        var paramType = "STATE";
+        var instance = objectsID[0] + "." + objectsID[1];
+
+        adapter.sendTo(instance, "setValue", {ID: ID, paramType: paramType, params: params}, function (doc) {
+            var err = doc.error;
+            var data = doc.result;
+            adapter.log.info("data = " + JSON.stringify(data));
+            adapter.log.info("err  = " + JSON.stringify(err));
+
+            if (!err) {
+                adapter.log.info("change_hmrpc_State was successfull for " + ID);
+            } else {
+                adapter.log.error("change_hmrpc_State Error: " + err);
             }
-        }
+        });
     }
 }
 
-var localEvent;
-var allEvents = [];
-var allEvents2Write = [];
-var colorPicker = 0;
-
 function parseScheduler(parent, ID) {
-    readEventsFromFile(parent+"."+ID, function (data, err) {
+    readEventsFromFile(parent+"."+ID, function (data) {
         if (data != undefined && data != "[null]" && data.length > 2) {
             var jsonData = JSON.parse(data);
             for (var i = 0; i < jsonData.length; i++) {
                 var event = jsonData[i];
-
-                var now = new Date();
 
                 var dt = new Date(event.start);
 
                 dt.setHours = dt.getHours + 2;
                 event.start = dt;
 
-                //m = $.fullCalendar.moment(event.end);
-                //dt = new Date(m.format());
                 dt = new Date(event.end);
 
                 dt.setHours = dt.getHours + 2;
                 event.end = dt;
 
                 var IDID = event.IDID;
-                var IDPARENT = event.IDPARENT;
                 var TYPE = event.IDTYPE;
 
                 var state = event.switcher;
 
                 // Todo: create recurring Events
-                var date = event.start;
-
                 var objectName = IDID;
 
                 var scheduleName = objectName+"###"+event.start.getTime()+"###"+state;
@@ -1085,7 +772,6 @@ function nextDay(d, dow){
 }
 
 function parseDecalc(jsonEvent, ID, type, parent) {
-    // Todo: get Explicit DECALCIFICATION
     var decalcDay = "";
     var decalcTime = "";
     if (type == "HM-CC-TC") {
@@ -1191,14 +877,12 @@ function parseEvents(jsonEvent, ID, type, parent) {
     }
 
     var jsonData = jsonEvent;
-    // TODO: Must parse all weekdays
     var weekDays = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'];
     var firstMidnight = 0;
     var editable;
     var dateStart;
 
     for (var weekday in weekDays) {
-        // TODO: Must parse all timeslots
         for (var i = 1; i < 25; i++) {
             var tempName = temperatureName + weekDays[weekday] + "_" + i;
             adapter.log.debug("ID: " + ID + ", " + tempName + ":" + jsonData[tempName]);
@@ -1222,6 +906,9 @@ function parseEvents(jsonEvent, ID, type, parent) {
                 var year = today.getYear() + 1900;
                 var month = today.getMonth();
                 var day = today.getDate();
+                var hours;
+                var minutes;
+                var tempn;
 
                 if (timeout / 60 == 24 || timeout == 0) {
                     firstMidnight = 1;
@@ -1229,8 +916,8 @@ function parseEvents(jsonEvent, ID, type, parent) {
                     if (timeout / 60 == 24 || timeout == 0) {
                         firstMidnight = 1;
                     }
-                    var hours = Math.floor(timeout / 60);
-                    var minutes = timeout % 60;
+                    hours = Math.floor(timeout / 60);
+                    minutes = timeout % 60;
 
                     // New Event
                     event = new Object();
@@ -1239,8 +926,8 @@ function parseEvents(jsonEvent, ID, type, parent) {
                     event.IDPARENT = parent;
                     event.IDID = ID;
 
-                    // TODO: DAS MUSS NEU GEMACHT WERDEN
                     // CHECK if start begins at midnight
+                    var temperature;
 
                     if (parseInt(minutes) + parseInt(hours) > 0 && i == 1) {
                         event.start = new Date(year, month, day - n + parseInt(weekday), 0, 0);
@@ -1251,8 +938,8 @@ function parseEvents(jsonEvent, ID, type, parent) {
                         }
                         var x = parseInt(i) - 1;
 
-                        var tempn = temperatureName + weekDays[weekday] + "_" + x;
-                        var temperature = jsonData[tempName];
+                        tempn = temperatureName + weekDays[weekday] + "_" + x;
+                        temperature = jsonData[tempName];
                         // event.title = tempn + " - " + ID;
                         // event.title = tempName + " - " + ID;
                         event.title = tempName;
@@ -1286,7 +973,6 @@ function parseEvents(jsonEvent, ID, type, parent) {
                         allEvents.push(event);
 
                         adapter.log.debug("NEW START = " + event.start + " NEW END = " + event.end);
-                        // TODO: $('#calendar').fullCalendar('renderEvent', event);
                     }
 
                     event = new Object();
@@ -1297,8 +983,8 @@ function parseEvents(jsonEvent, ID, type, parent) {
                     adapter.log.debug(timeName + ":" + jsonData[timeName]);
                     var timeend = jsonData[dummy];
 
-                    var hours = Math.floor(timeend / 60);
-                    var minutes = timeend % 60;
+                    hours = Math.floor(timeend / 60);
+                    minutes = timeend % 60;
 
                     event.end = new Date(year, month, day - n + parseInt(weekday), hours, minutes);
                     adapter.log.debug("start:"+event.start+",end:"+event.end);
@@ -1306,14 +992,11 @@ function parseEvents(jsonEvent, ID, type, parent) {
                         adapter.log.error("event.end is undefined");
                     }
 
-                    //var x = parseInt(i) - 1;
-                    var x = parseInt(i) + 1;
+                    x = parseInt(i) + 1;
                     if (x == 0)
                         x = 2;
-                    var tempn = temperatureName + weekDays[weekday] + "_" + x;
-                    var temperature = jsonData[tempn]
-                    // event.title = tempName + " - " + ID;
-                    // event.title = tempn + " - " + ID;
+                    tempn = temperatureName + weekDays[weekday] + "_" + x;
+                    temperature = jsonData[tempn]
                     event.title = tempn;
 
                     event.section = parent + "." + ID;
@@ -1322,7 +1005,6 @@ function parseEvents(jsonEvent, ID, type, parent) {
 
                     event.allDay = false;
                     event.id = event.title + "_" + ID;
-                    //event.notes = temperature;
                     event.temperature = temperature;
                     event.repeater = "true";
 
@@ -1347,16 +1029,11 @@ function parseEvents(jsonEvent, ID, type, parent) {
                     // Create recurring Event
 
                     allEvents.push(event);
-                    /* *************************************************************************************** */
-                    //var ts = Math.round((event.start).getTime() / 1000);
-                    //adapter.states.setState('occ.0.'+ID, {val: event.title, ack: true, ts: ts});
-                    /* *************************************************************************************** */
+
                     adapter.log.debug("START = " + event.start + " END = " + event.end);
-                    // TODO : $('#calendar').fullCalendar('renderEvent', event);
                 }
                 today.setTime(today.getTime() + 7 * (24*60*60*1000));
             }
         }
     }
 }
-
