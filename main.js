@@ -127,7 +127,7 @@ var adapter = utils.adapter({
             var job;
             var date;
 
-            var scheduleName = objectName+"###"+begin.getTime()+"###"+state;
+            var scheduleName;
 
             if (action == "submit") {
                 var paramset;
@@ -579,8 +579,8 @@ function getParamsets(objectID, paramType) {
     adapter.sendTo(instance, "getParamset", {ID:ID, paramType:paramType}, function (doc) {
         var err = doc.error;
         var data = doc.result;
-        adapter.log.info("data = " + JSON.stringify(data));
-        adapter.log.info("err  = " + JSON.stringify(err));
+        adapter.log.debug("data = " + JSON.stringify(data));
+        adapter.log.debug("err  = " + JSON.stringify(err));
 
         if (!err) {
             var parent = objectsID[0]+"."+objectsID[1];
@@ -669,8 +669,8 @@ function putParamsets(address, params) {
         adapter.sendTo(instance, "putParamset", {ID: ID, paramType: paramType, params: params}, function (doc) {
             var err = doc.error;
             var data = doc.result;
-            adapter.log.info("data = " + JSON.stringify(data));
-            adapter.log.info("err  = " + JSON.stringify(err));
+            adapter.log.debug("data = " + JSON.stringify(data));
+            adapter.log.debug("err  = " + JSON.stringify(err));
 
             if (!err) {
                 adapter.log.info("putParamset was successfull for " + ID);
@@ -706,8 +706,8 @@ function change_hmrpc_State(address, params) {
         adapter.sendTo(instance, "setValue", {ID: ID, paramType: paramType, params: params}, function (doc) {
             var err = doc.error;
             var data = doc.result;
-            adapter.log.info("data = " + JSON.stringify(data));
-            adapter.log.info("err  = " + JSON.stringify(err));
+            adapter.log.debug("data = " + JSON.stringify(data));
+            adapter.log.debug("err  = " + JSON.stringify(err));
 
             if (!err) {
                 adapter.log.info("change_hmrpc_State was successfull for " + ID);
