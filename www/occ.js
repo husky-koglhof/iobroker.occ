@@ -546,6 +546,19 @@ $(function() {
 });
 
 $(function() {
+    $("#setDECALCIFICATION").change(function() {
+        $("#jqdTo").hide();
+        $("#toTime").hide();
+        $("#toampm").hide();
+        $("#span_to").hide();
+    });
+    $("#setTEMPERATURE").change(function() {
+        $("#jqdTo").show();
+        $("#toTime").show();
+        $("#toampm").show();
+        $("#span_to").show();
+    });
+
     $( "#select_options" ).button().on( "click", function() {
         $('#selectSingle').hide();
         $('#selectMultiple').show();
@@ -1375,11 +1388,20 @@ $(document).ready(function() {
                         $('#input_notes').val(event.notes);
 
                         if (event.decalc) {
+                            alert("true");
                             $('#setDECALCIFICATION').prop("checked", true);
                             $("#temperature_spinner").val("");
+                            $("#jqdTo").hide();
+                            $("#toTime").hide();
+                            $("#toampm").hide();
+                            $("#span_to").hide();
                         } else {
                             $('#setTEMPERATURE').prop("checked", true);
                             $("#temperature_spinner").val(event.temperature);
+                            $("#jqdTo").show();
+                            $("#toTime").show();
+                            $("#toampm").show();
+                            $("#span_to").show();
                         }
                         $('#eventID').val(event.id);
 

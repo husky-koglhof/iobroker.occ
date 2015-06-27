@@ -153,6 +153,7 @@ var adapter = utils.adapter({
                             // TEMPERATUR_MONDAY_0 = TEMPERATUR_SUNDAY_???
                         }
 
+                        start = array[i]['start'];
                         end = array[i]['end'];
                         var x = new Date(end);
                         var hours = x.getHours();
@@ -170,17 +171,60 @@ var adapter = utils.adapter({
                         } else if (TYPE == "HM-CC-RT-DN" || TYPE == "BC-RT-TRX-CyG-3") {
                             timeoutText = temperatureText.replace("TEMPERATURE", "TIMEOUT");
                         }
-                        paramset[timeoutText] = timeout;
-                        paramset[temperatureText] = {explicitDouble: temperature};
+
+                        // Bugfix, Set Decalc
+                        if (temperatureText == "DECALCIFICATION") {
+                            var decalcDay = new Date(start).getDay();
+
+                            /* Javascript Date
+                             0 = Sunday
+                             1 = Monday
+                             2 = Tuesday
+                             3 = Wednesday
+                             4 = Thursday
+                             5 = Friday
+                             6 = Saturday
+                             */
+
+                            /* Homematic Date
+                             0 = Saturday
+                             1 = Sunday
+                             2 = Monday
+                             3 = Tuesday
+                             4 = Wednesday
+                             5 = Thursday
+                             6 = Friday
+                             */
+
+                            if (decalcDay == 6) {
+                                decalcDay = 0;
+                            } else {
+                                decalcDay+=1;
+                            }
+
+
+                            if (TYPE == "HM-CC-TC") {
+                                paramset["DECALCIFICATION_DAY"] = decalcDay;
+                                paramset["DECALCIFICATION_MINUTE"] = new Date(start).getMinutes();
+                                paramset["DECALCIFICATION_HOUR"] = new Date(start).getHours();
+
+                            } else if (TYPE == "HM-CC-RT-DN" || TYPE == "BC-RT-TRX-CyG-3") {
+                                paramset["DECALCIFICATION_WEEKDAY"] = decalcDay; //  0 => Saturday, ..., 6 => Friday
+                                paramset["DECALCIFICATION_TIME"] = (new Date(start).getHours() * 60) + new Date(start).getMinutes();
+                            }
+                        } else {
+                            paramset[timeoutText] = timeout;
+                            paramset[temperatureText] = {explicitDouble: temperature};
+                        }
                     }
                 }
                 adapter.log.debug(JSON.stringify(paramset));
-                putParamsets(IDPARENT+"."+ID, paramset);
+                putParamsets(IDPARENT+"."+IDID, paramset);
             } else if (action == "save") {
                 TYPE = array['IDTYPE'];
                 IDPARENT = array['IDPARENT'];
                 IDID = array['IDID'];
-                if (TYPE == 'HM-LC-Sw2-FM' || TYPE == "HM-LC-Sw4-DR") {
+                if (TYPE == "HM-LC-Sw1-FM" || TYPE == 'HM-LC-Sw2-FM' || TYPE == "HM-LC-Sw4-DR") {
                     start = array['start'];
                     ende = array['end'];
                     begin = new Date(start);
@@ -285,7 +329,7 @@ var adapter = utils.adapter({
                 TYPE = array['IDTYPE']; // HM-TT-TC
                 IDPARENT = array['IDPARENT'];
                 IDID = array['IDID'];
-                if (TYPE == 'HM-LC-Sw2-FM' || TYPE == "HM-LC-Sw4-DR") {
+                if (TYPE == 'HM-LC-Sw1-FM' || TYPE == 'HM-LC-Sw2-FM' || TYPE == "HM-LC-Sw4-DR") {
 
                     IDID = IDID.replace(".", ":");
                     objectName = IDPARENT + "." + IDID;
@@ -345,8 +389,13 @@ function createScheduledJob(job) {
 
             var a = schedule.scheduleJob(job.scheduleName, job.time, function(){
                 adapter.log.info("start changeState for TYPE " + job.TYPE + " address " + job.objectName);
-                if (job.TYPE == "HM-LC-Sw2-FM" || job.TYPE == "HM-LC-Sw4-DR") {
-                    change_hmrpc_State(job.objectName, job.state);
+                if (job.TYPE == 'HM-LC-Sw1-FM' || job.TYPE == "HM-LC-Sw2-FM" || job.TYPE == "HM-LC-Sw4-DR") {
+                    // Bugfix, let Homematic Switches set their State by ioBroker
+                    // change_hmrpc_State(job.objectName, job.state);
+                    if (job.objectName.search("STATE" == 0)) {
+                        job.objectName = job.objectName + ".STATE";
+                    }
+                    changeState(job.objectName, job.state);
                 } else {
                     changeState(job.objectName, job.state);
                 }
@@ -480,13 +529,19 @@ function addiCalObjects() {
                     }
                 }
 
-                if (obj.native == undefined) {
-                    event.IDTYPE = obj.native["TypeName"]; // VARDP
+                if (obj.native != undefined) {
+                    if ( obj.native["TypeName"] != undefined) {
+                        event.IDTYPE = obj.native["TypeName"]; // VARDP
+                    } else if (obj.native["CONTROL"] != undefined) {
+                        event.IDTYPE = obj.native["CONTROL"]; // SWITCH.STATE
+                    } else {
+                        event.IDTYPE = obj.native["PARENT_TYPE"]; // HM-LC-Sw2-FM
+                    }
                 } else {
                     event.IDTYPE = "VARDP";
                 }
 
-                if (event.IDTYPE == "HM-LC-Sw2-FM" || event.IDTYPE == "HM-LC-Sw4-DR") {
+                if (event.IDTYPE == "HM-LC-Sw1-FM" || event.IDTYPE == "HM-LC-Sw2-FM" || event.IDTYPE == "HM-LC-Sw4-DR" || event.IDTYPE == "SWITCH.STATE") {
                     if (state == "on") {
                         event.switcher = true;
                         state = true;
@@ -621,7 +676,7 @@ function getParamsets(objectID, paramType) {
                     writeEventsToFile(myID, JSON.stringify(allEvents));
                     allEvents = [];
                 }
-            } else if (type == "HM-LC-Sw2-FM" || type == "HM-LC-Sw4-DR") {
+            } else if (type == "HM-LC-Sw1-FM" || type == "HM-LC-Sw2-FM" || type == "HM-LC-Sw4-DR") {
                 parseScheduler(parent, ID);
             }
         } else {
