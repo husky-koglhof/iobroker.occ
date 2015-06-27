@@ -554,9 +554,9 @@ function addiCalObjects() {
                     event.state = state;
                 } else if (event.IDTYPE == "VARDP") {
                     // Bugfix true | false comes as string so convert it to boolean
-                    if (event.state == "true") {
+                    if (state == "true") {
                         event.state = true;
-                    } else if (event.state == "false") {
+                    } else if (state == "false") {
                         event.state = false;
                     } else {
                         event.state = state;
