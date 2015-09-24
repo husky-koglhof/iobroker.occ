@@ -17,8 +17,8 @@
 
 <!-- you have to define 2 functions in the global scope: -->
 <script type="text/javascript">
+    var thermostatArray = {};
     var devices = [];
-    var rooms =   [];
 
     systemDictionary = {
         "Objects Control Calendar Adapter settings": {
@@ -28,6 +28,17 @@
         "rpcListenPort_":         {"en": "RPC Listen Port Begin:",  "de": "RPC Listen Port Start:"},
         "demo_":                  {"en": "Demo Mode (save back to object disabled)", "de": "Demo Modus (Daten werden nicht zurückgeschrieben"},
         "ical_":                  {"en": "Use iCal Objects", "de": "iCal Objekte verwenden"},
+        "name":                   {"en": "Name", "de": "Name"},
+        "paramset":               {"en": "Params", "de": "Parameter"},
+        "decalcset":              {"en": "Decalc", "de": "Entkalkung"},
+        "param_chn":              {"en": "P-Channel", "de": "P-Kanal"},
+        "decalc_chn":             {"en": "D-Channel", "de": "D-Kanal"},
+        //"timeout":                {"en": "Timeout", "de": "Auszeit"},
+        //"temperature":            {"en": "Temperature", "de": "Temperatur"},
+        "decalc_time":            {"en": "D-Time", "de": "D-Zeit"},
+        "decalc_day":             {"en": "D-Day", "de": "D-Tag"},
+        "timeoutText":            {"en": "T-Text", "de": "T-Auszeit"},
+        "mode":                   {"en": "Mode", "de": "Modus"},
         "help_tip":               {
             "en": "On save the adapter restarts with new configuration immediately",
             "de": "Beim Speichern von Einstellungen der Adapter wird sofort neu gestartet.",
@@ -38,16 +49,71 @@
     function load(settings, onChange) {
         if (!settings) return;
 
-        getIPs(function(ips) {
-            for (var i = 0; i < ips.length; i++) {
-                $('#rpcListenIp').append('<option value="' + ips[i].address + '">' + ips[i].name + '</option>');
-            }
-            $('#rpcListenIp.value').val(settings.rpcListenIp);
-        });
-
         changed = false;
         for (var key in settings) {
             setValue(key, settings[key]);
+        }
+
+        editTable('devices', ['name', 'paramset', 'decalcset', 'param_chn', 'decalc_chn', /*'timeout', 'temperature',*/ 'decalc_time', 'decalc_day', 'timeoutText', 'mode'], devices, 1);
+
+        thermostatArray = settings.thermostat || {};
+
+        if (thermostatArray !== undefined) {
+            var $grid = $('#devices');
+
+            // First get Root Object
+            var paramset = thermostatArray.paramset;
+            var decalcset = thermostatArray.decalcset;
+            var param_chn = thermostatArray.param_chn;
+            var decalc_chn = thermostatArray.decalc_chn;
+            //var timeout = thermostatArray.timeout;
+            //var temperature = thermostatArray.temperature;
+            var decalc_time = thermostatArray.decalc_time;
+            var decalc_day = thermostatArray.decalc_day;
+            var timeoutText = thermostatArray.timeoutText;
+            var mode = thermostatArray.mode;
+            addToTable("devices", {
+                name: "Default",
+                paramset: paramset,
+                decalcset: decalcset,
+                param_chn: param_chn,
+                decalc_chn: decalc_chn,
+                //timeout: timeout,
+                //temperature: temperature,
+                decalc_time: decalc_time,
+                decalc_day: decalc_day,
+                timeoutText: timeoutText,
+                mode: mode
+            }, $grid, true);
+
+            for (var object in thermostatArray) {
+                if (thermostatArray[object].name !== undefined) {
+                    name = thermostatArray[object].name;
+                    paramset = thermostatArray[object].paramset;
+                    decalcset = thermostatArray[object].decalcset;
+                    param_chn = thermostatArray[object].param_chn;
+                    decalc_chn = thermostatArray[object].decalc_chn;
+                    //timeout = thermostatArray[object].timeout;
+                    //temperature = thermostatArray[object].temperature;
+                    decalc_time = thermostatArray[object].decalc_time;
+                    decalc_day = thermostatArray[object].decalc_day;
+                    timeoutText = thermostatArray[object].timeoutText;
+                    mode = thermostatArray[object].mode;
+                    addToTable("devices", {
+                        name: name,
+                        paramset: paramset,
+                        decalcset: decalcset,
+                        param_chn: param_chn,
+                        decalc_chn: decalc_chn,
+                        //timeout: timeout,
+                        //temperature: temperature,
+                        decalc_time: decalc_time,
+                        decalc_day: decalc_day,
+                        timeoutText: timeoutText,
+                        mode: mode
+                    }, $grid, true);
+                }
+            }
         }
     }
 
@@ -67,8 +133,81 @@
     }
 
     function save(callback) {
-        callback(getSettings());
-        //callback(obj, {localLink: 'http://%ip%:' + obj.webServerPort});
+        var obj = {};
+        $('.value').each(function () {
+            var $this = $(this);
+            if ($this.attr('type') == 'checkbox') {
+                obj[$this.attr('id')] = $this.prop('checked');
+            } else {
+                obj[$this.attr('id')] = $this.val();
+            }
+        });
+
+        // Get edited table
+        obj.devices = getTableResult('devices', ['name', 'paramset', 'decalcset', 'param_chn', 'decalc_chn', /*'timeout', 'temperature',*/ 'decalc_time', 'decalc_day', 'timeoutText', 'mode']);
+        var thermostatArray = {};
+        for (value in obj.devices) {
+            var object = obj.devices[value];
+            var paramset = object.paramset;
+            var decalcset = object.decalcset;
+            var param_chn = object.param_chn;
+            var decalc_chn = object.decalc_chn;
+            var decalc_day = object.decalc_day;
+            //var timeout = object.timeout;
+            //var temperature = object.temperature;
+
+            var mode = object.mode;
+            var mt = mode.split(",");
+            if (mt instanceof Array && mt.length == 2) {
+                mode = mt;
+            }
+
+            var decalc_time = object.decalc_time;
+            var dt = decalc_time.split(",");
+            if (dt instanceof Array && dt.length == 2) {
+                decalc_time = dt;
+            }
+
+            var timeoutText = object.timeoutText;
+            var tt = timeoutText.split(",");
+            if (tt instanceof Array && tt.length == 2) {
+                timeoutText = tt;
+            }
+
+            if (object.name == "Default") {
+                thermostatArray['name'] = object.name;
+                thermostatArray['paramset'] = paramset;
+                thermostatArray['decalcset'] = decalcset;
+                thermostatArray['param_chn'] = param_chn;
+                thermostatArray['decalc_chn'] = decalc_chn;
+                //thermostatArray['timeout'] = timeout;
+                //thermostatArray['temperature'] = temperature;
+                thermostatArray['decalc_time'] = decalc_time;
+                thermostatArray['decalc_day'] = decalc_day;
+                thermostatArray['timeoutText'] = timeoutText;
+                thermostatArray['mode'] = mode;
+            } else {
+                thermostatArray[object.name] = {};
+                thermostatArray[object.name]['name'] = object.name;
+
+                if (paramset != "") thermostatArray[object.name]['paramset'] = paramset;
+                if (decalcset != "") thermostatArray[object.name]['decalcset'] = decalcset;
+                if (param_chn != "") thermostatArray[object.name]['param_chn'] = param_chn;
+                if (decalc_chn != "") thermostatArray[object.name]['decalc_chn'] = decalc_chn;
+                //if (timeout != "") thermostatArray[object.name]['timeout'] = timeout;
+                //if (temperature != "") thermostatArray[object.name]['temperature'] = temperature;
+                if (decalc_time != "") thermostatArray[object.name]['decalc_time'] = decalc_time;
+                if (decalc_day != "") thermostatArray[object.name]['decalc_day'] = decalc_day;
+                if (timeoutText != "") thermostatArray[object.name]['timeoutText'] = timeoutText;
+                if (mode != "") thermostatArray[object.name]['mode'] = mode;
+            }
+        }
+
+        var settings = {};
+        settings['thermostat'] = thermostatArray;
+        console.log(JSON.stringify(thermostatArray));
+        $('#save').button("disable");
+        callback(settings);
     }
 
     function setValue(id, value) {
@@ -104,21 +243,33 @@
         }
     }
 </script>
-
+<style>
+    th {
+        font-size: 10px;
+        font-weight: bold;
+        padding-left: 5px;
+        padding-bottom: 3px;
+    }
+    td {
+        font-size: 10px;
+        font-weight: bold;
+        padding-left: 5px;
+        padding-bottom: 3px;
+    }
+</style>
 <!-- you have to put your config page in a div with id adapter-container -->
 <div id="adapter-container">
     <table><tr><td><img src="logo.svg"></td><td><h3 class="translate">Objects Control Calendar Adapter settings</h3></td></tr></table>
     <table>
         <p class="translate">help_tip</p>
-        <th>Homematic Communications</th>
-        <tr><td class="translate">rpcListenIp_</td><td>        <select class="value" id="rpcListenIp"></select></td></tr>
-        <tr><td class="translate">rpcListenPort_</td><td>      <input  class="value number" id="rpcListenPort" size="5" maxlength="5"/></td></tr>
         <th>OCC Options</th>
         <tr><td class="translate">demo_</td><td><input type='checkbox' id="demo" class="value"/></td></tr>
         <tr><td class="translate">ical_</td><td><input type='checkbox' id="ical" class="value"/></td></tr>
-
+        <tr><td colspan="2">&nbsp;</td></tr>
+        <th>Configuration Objects</th>
+        <tr>
+            <table id="devices"></table><div id="pager-devices" style="width:1024px"></div>
+        </tr>
     </table>
-
-
 </div>
 </html>

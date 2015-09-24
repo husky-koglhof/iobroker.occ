@@ -7,6 +7,12 @@ var states = {};
 var objects = {};
 var enums = [];
 
+function nextDay(d, dow){
+    d.setDate(d.getDate() + (dow+(7-d.getDay())) % 7);
+    return d;
+}
+
+// TODO: Remove Function
 function writeEventsToFile(event, eventID) {
     var eventsFromCalendar = $('#calendar').fullCalendar('clientEvents');
     // Bugfix: Elements can only saved if source tree is not available (cyclic object while JSON.stringify)
@@ -25,13 +31,13 @@ function writeEventsToFile(event, eventID) {
         if (n > 0) {
             events.push(value);
         } else {
-            // Todo: save Objects with same section too
-            var section = value.section;
-            section = section.replace(":",".");
+            // Todo: save Objects with same IDID too
+            var IDID = value.IDID;
+            IDID = IDID.replace(":",".");
 
-            n = section.search(eventID);
+            n = IDID.search(eventID);
             if (n >= 0) {
-                //alert("save object cause of section name");
+                //alert("save object cause of IDID name");
                 events.push(value);
             }
         }
@@ -78,7 +84,78 @@ function getData(callback) {
     });
 }
 
-function readEventsFromFile() {
+function createTypes() {
+    $("#alltypes").multiselect({
+        multiple: false,
+        header: "Select an option",
+        noneSelectedText: "Select an Option",
+        selectedList: 1,
+        click: function(event, ui){
+            if (ui.checked) {
+                $('#divTemperature').hide();
+                $('#divSpinner').hide();
+                $('#divSwitch').hide();
+                $('#div_Script').hide();
+                $("#divState_Generic").show();
+
+                if (ui.value == "Script") {
+                    $('#div_Script').show();
+                } else if (ui.value == "Thermostat") {
+                    $('#divTemperature').show();
+                    $('#divSpinner').show();
+                } else if (ui.value == "Variable") {
+
+                } else if (ui.value == "Switch") {
+                    $('#divSwitch').show();
+                }
+                $("#divState_Generic").hide();
+                // Todo: Not yet supported
+                $('button_reset').show();
+            }
+        },
+        selectedText: function(numChecked, numTotal, checkedItems) {
+        },
+        uncheckAll: function(){
+        },
+        optgrouptoggle: function(event, ui) {
+        }
+    });
+
+    $("#alltypes").children().remove("optgroup");
+
+    // Todo: add Object and iCal to Group
+    var glob_optgroup = $('<optgroup>');
+    glob_optgroup.attr('label',"Supported Types");
+
+    var glob_option = $("<option></option>");
+
+    glob_option.val("Switch");
+    glob_option.text("Switch");
+    glob_optgroup.append(glob_option);
+
+    var glob_option = $("<option></option>");
+
+    glob_option.val("Script");
+    glob_option.text("Script");
+    glob_optgroup.append(glob_option);
+
+    var glob_option = $("<option></option>");
+
+    glob_option.val("Thermostat");
+    glob_option.text("Thermostat");
+    glob_optgroup.append(glob_option);
+
+    var glob_option = $("<option></option>");
+
+    glob_option.val("Variable");
+    glob_option.text("Variable");
+    glob_optgroup.append(glob_option);
+
+    $("#alltypes").append(glob_optgroup);
+    $('#alltypes').multiselect( 'refresh' );
+}
+
+function readEventsFromObjects() {
     $("#allelement").children().remove("optgroup");
     $("#allelements").children().remove("optgroup");
 
@@ -107,36 +184,46 @@ function readEventsFromFile() {
             $("#allelements").multiselect({
                 click: function(event, ui){
                     if (ui.checked) {
-                        servConn.readFile('occ-events_'+ui.value+'.json', function (err, data) {
-                            if (err) {
-                                alert('occ-events_'+ui.value+'.json: ' + err);
-                            } else {
-                                allEvents = data;
-                                parseEvents(data, true, ui.value);
+                        var ioEvents = [];
+                        for (var obj in objects) {
+                            if (obj.search("occ.0") == 0) {
+                                //console.log("--"+obj);
+                                if (obj.search(ui.value) > 0) {
+                                    if (obj.search(".update") == -1 && obj.search(".html") == -1 && obj.search(".color") == -1) {
+                                        if (objects[obj].native !== undefined) {
+                                            ioEvents.push(objects[obj].native);
+                                        }
+                                    }
+                                }
                             }
-                        });
+                        }
+                        var s = JSON.stringify(ioEvents);
+                        allEvents = s;
+                        parseEvents(s, true, ui.value);
                     } else {
+                        // TODO: CHECK IF WE NEED ioBroker.objects
                         parseEvents(null, "delete", ui.value);
                     }
                 },
-                selectedText: function(numChecked, numTotal, checkedItems){
-                    //$( "#dialog" ).dialog( "open" );
-                    var allItems = checkedItems;
-                    var values = $.map(checkedItems, function(checkbox){
-                        servConn.readFile('occ-events_'+checkbox.value+'.json', function (err, data) {
-                            if (err) {
-                                alert('occ-events_'+checkbox.value+'.json: ' + err);
-                            } else {
-                                allEvents = data;
-                                parseEvents(data, true, checkbox.value);
-                            }
-                        });
-
-                    });
+                selectedText: function(numChecked, numTotal, checkedItems) {
                 },
                 uncheckAll: function(){
                     $('#calendar').fullCalendar('removeEvents');
                     eventSources = new Array();
+                },
+                checkAll: function(event, ui) {
+                    var allElements = $('#allelements').val();
+                    var valArr = allElements;
+                    i = 0, size = valArr.length, $options = $('#allelements option');
+
+                    for(i; i < size; i++){
+                        $options.filter('[value="'+valArr[i]+'"]').prop('selected', true);
+
+                        $("#allelements").multiselect("widget").find(":checkbox[value='"+valArr[i]+"']").each(function() {
+                            this.click();
+                        });
+                    }
+                    $("#allelements").multiselect("refresh");
                 },
                 optgrouptoggle: function(event, ui){
                     if (ui.checked == false) {
@@ -181,68 +268,174 @@ function readEventsFromFile() {
 function saveEventToObject(event, flag) {
     /* Todo: Cyclic Object */
     delete event.source;
+    var fileName;
+    var id;
+    var title;
+    var objectName;
+    var timestamp;
 
-    servConn._socket.emit('setState', 'occ.0.'+event.section+"###"+flag, {
-        val: event,
-        ack: true
-    }, function (res, err) {
-        console.log("result: " + res);
-        console.log("error: " + err);
-    });
+    if (event.IDID == undefined) {
+        fileName = event[0].IDID;
+        id = event[0].id;
+        title = event[0].title;
+        timestamp = event[0].start.unix();
+    } else {
+        fileName = event.IDID;
+        id = event.id;
+        title = event.title;
+        timestamp = event.start.unix();
+    }
 
+    objectName = 'occ.0.'+fileName+"."+title + "_#" + timestamp + "#";
+
+    var stateObj;
+
+    if (flag == "submit") {
+        stateObj = {
+            common: {
+                name:  objectName,
+                read:  true,
+                write: true,
+                type: 'state',
+                role: 'meta.config',
+                update: true
+            },
+            native: event[0],
+            type:   'state'
+        };
+    } else {
+        stateObj = {
+            common: {
+                name:  objectName,
+                read:  true,
+                write: true,
+                type: 'state',
+                role: 'meta.config',
+                update: true
+            },
+            native: event,
+            type:   'state'
+        };
+
+    }
+
+    if (fileName == "undefined" || fileName == undefined) {
+        alert("Failure");
+    }
+
+    servConn._socket.emit('setState', 'occ.0.'+fileName+".update", {val: flag, ack: true});
+    servConn._socket.emit('setObject', objectName, stateObj);
+
+    console.log("setState for " + 'occ.0.'+fileName+".update");
+    console.log("setObject for " + objectName);
 }
 
 function parseEvents(jsonEvent, flag, objectID) {
     if (flag == true) {
 
         //TODO: generate Objects for repeating Events
-        console.log(jsonEvent);
+        //console.log(jsonEvent);
         var jsonData = JSON.parse(jsonEvent);
         var arr = new Array();
 
         for (var i = 0; i < jsonData.length; i++) {
             var ev = jsonData[i];
 
-            var repeating = ev.repeater;
-            if (repeating) {
-                //alert(ev.repeater);
+            // TODO: Create Events for each
+            // ev.repeaterCombo = day
+            // ev.numberoftimes = 4
+            // ev.endCombo = times
+            var eventID = ev.id;
+            var repeatEnd = new Date(ev.jqdEnd);
+
+            var dat = new Date(ev.jqdFrom);
+            var y = dat.getFullYear();
+            var m = dat.getMonth();
+            var d = dat.getDate();
+            var startDate = new Date(y, m, d);
+
+            // Todo: Check if repeaterCombo is custom...
+            if (ev.repeaterCombo == "custom") {
+                var combo = $("#repeaterTab").tabs('option', 'active');
+                alert("combo = " + combo);
+                if (combo == 0) {
+                    var days = $("#dailyinput").val();
+                    alert("days = " + days);
+                    createEvent(ev, days, "day", eventID);
+                } else if (combo == 1) {
+                    var days = $("#weeklyinput").val();
+                    var mon = $('#jqbmonday').prop('checked') ? $('#jqbmonday').val() : false;
+                    var tue = $('#jqbtuesday').prop('checked') ? $('#jqbtuesday').val() : false;
+                    var wed = $('#jqbwednesday').prop('checked') ? $('#jqbwednesday').val() : false;
+                    var thu = $('#jqbthursday').prop('checked') ? $('#jqbthursday').val(): false;
+                    var fri = $('#jqbfriday').prop('checked') ? $('#jqbfriday').val() : false;
+                    var sat = $('#jqbsaturday').prop('checked') ? $('#jqbsaturday').val() : false;
+                    var sun = $('#jqbsunday').prop('checked') ? $('#jqbsunday').val() : false;
+                    var weekdays = [mon, tue, wed, thu, fri, sat, sun];
+                    alert(weekdays);
+                    createEvent(ev, "weekday", eventID, weekdays);
+                } else if (combo == 2) {
+                    var days = $("#monthlyinput").val();
+                    var onEach = $('#monthlygroup1').prop('checked');
+                    if (onEach == true) {
+                        jQuery("input[name='button_monthly']").each(function() {
+                            alert( this.value + ":" + this.checked );
+                        });
+                    } else {
+                        var monthlycombofirst = $('#monthlycombofirst').val();
+                        var monthlycombosecond = $('#monthlycombosecond').val();
+                        alert(monthlycombofirst);
+                        alert(monthlycombosecond);
+                    }
+                } else if (combo == 3) {
+
+                }
+            } else {
+                if (ev.endCombo == "times") {
+                    createEvent(ev, ev.numberoftimes, ev.repeaterCombo, eventID);
+                } else if (ev.endCombo == "date") {
+                    if (ev.repeaterCombo == "day") {
+                        // Create events until End $("#endCombo").val() + " " + $("#jqdEnd").val()
+                        var days = (repeatEnd - startDate) / 1000 / 60 / 60 / 24;
+                        createEvent(ev, days, "day", eventID);
+                    } else if (ev.repeaterCombo == "week") {
+                        var days = (repeatEnd - startDate) / 1000 / 60 / 60 / 24 / 7;
+                        createEvent(ev, days, "week", eventID);
+                    } else if (ev.repeaterCombo == "month") {
+                        var days = (repeatEnd.getMonth() - startDate.getMonth());
+                        createEvent(ev, days, "month", eventID);
+                    } else if (ev.repeaterCombo == "year") {
+                        var days = (repeatEnd.getYear() - startDate.getYear());
+                        createEvent(ev, days, "year", eventID);
+                    }
+                } else {
+                    createEvent(ev, 0, "single", eventID);
+                }
             }
-            var m = $.fullCalendar.moment(ev.start);
-
-            var dt = new Date(m.format());
-            dt.setHours = dt.getHours + 2;
-            ev.start = dt;
-
-            m = $.fullCalendar.moment(ev.end);
-            dt = new Date(m.format());
-            dt.setHours = dt.getHours + 2;
-            ev.end = dt;
-
-            arr[i] = ev;
-            // $('#calendar').fullCalendar('renderEvent', ev);
-            console.log(ev.id);
         }
-        eventSources[objectID] = arr;
-        $('#calendar').fullCalendar('removeEvents');
-        //$('#calendar').fullCalendar('addEventSource', eventSources[objectID]);
+        /* TODO !!!
+         eventSources[objectID] = arr;
+         $('#calendar').fullCalendar('removeEvents');
+         //$('#calendar').fullCalendar('addEventSource', eventSources[objectID]);
 
-        // Todo: render all known Events from eventSources
-        for (var key in eventSources) {
-            var value = eventSources[key];
-            $('#calendar').fullCalendar('addEventSource', value);
-        }
+         // Todo: render all known Events from eventSources
+         for (var key in eventSources) {
+         var value = eventSources[key];
+         $('#calendar').fullCalendar('addEventSource', value);
+         }
 
-        $('#calendar').fullCalendar('rerenderEvents');
+         $('#calendar').fullCalendar('rerenderEvents');
 
-        console.log("----------------> "+objectID);
+         //console.log("----------------> "+objectID);
+         */
     } else if (flag == "delete") {
-        // Get All Objects with this objectID / section
+        // Get All Objects with this objectID / IDID
         var eventsFromCalendar = $('#calendar').fullCalendar('clientEvents');
         var localID = objectID.replace(".",":");
         var localEvents = [];
         for (var i = 0; i < eventsFromCalendar.length; i++) {
             var localEvent =  eventsFromCalendar[i];
-            if (localEvent.section == localID) {
+            if (localEvent.IDID == localID) {
                 localEvents.push(localEvent);
             }
         }
@@ -252,10 +445,11 @@ function parseEvents(jsonEvent, flag, objectID) {
         $('#calendar').fullCalendar( 'refetchEvents' );
 
         if (jsonEvent != undefined) {
-            writeEventsToFile(null, objectID);
+            // TODO: Remove Function
+            //writeEventsToFile(null, objectID);
             saveEventToObject(jsonEvent, "delete");
         }
-        console.log("DELETE: "+objectID);
+        //console.log("DELETE: "+objectID);
     } else  {
         var jsonData = JSON.parse(jsonEvent);
 
@@ -284,7 +478,6 @@ function parseEvents(jsonEvent, flag, objectID) {
                     // New Event
                     var event = new Object();
 
-                    // DUMMY, Only Create Objects for the actual week
                     var today = new Date();
                     var n = today.getDay() - 1;
 
@@ -294,20 +487,18 @@ function parseEvents(jsonEvent, flag, objectID) {
                         // Create Object from midnight until first event
                         event.start = new Date(year, month, day - n + parseInt(weekday), 0, 0);
                         event.end = new Date(year, month, day - n + parseInt(weekday), hours, minutes);
-                        // DUMMY END
                         var x = parseInt(i) - 1;
 
                         var tempn = "TEMPERATUR_" + weekDays[weekday] + "_" + x;
                         var temperature = jsonData[tempName];
                         event.title = tempn;
-                        event.section = "TIMEOUT_" + weekDays[weekday] + "_" + x;
+                        event.subID = "TIMEOUT_" + weekDays[weekday] + "_" + x;
                         event.color = "#3A87AD";
                         event.allDay = false;
                         event.id = event.title;
                         event.editable = true;
                         event.startEditable = true;
                         event.durationEditable = true;
-                        //event.notes = temperature;
                         event.temperature = temperature;
 
                         $('#calendar').fullCalendar('renderEvent', event);
@@ -333,7 +524,7 @@ function parseEvents(jsonEvent, flag, objectID) {
                     var tempn = "TEMPERATUR_" + weekDays[weekday] + "_" + x;
                     var temperature = jsonData[tempn]
                     event.title = tempName;
-                    event.section = timeName;
+                    event.subID = timeName;
                     event.color = "#3A87AD";
                     event.allDay = false;
                     event.id = event.title;
@@ -353,9 +544,9 @@ function parseEvents(jsonEvent, flag, objectID) {
 function showHideEndCombo(element) {
     if (element == 'never') {
         $('#jqdEnd').attr('disabled', true);
-        $('#jqdEnd').show();
-        $('#numberoftimes').attr('disabled', false);
+        $('#numberoftimes').attr('disabled', true);
         $('#numberoftimes').hide();
+        $('#jqdEnd').hide();
     } else if (element == 'times') {
         $('#jqdEnd').attr('disabled', true);
         $('#jqdEnd').hide();
@@ -373,18 +564,34 @@ function showHideRepeater(element) {
     var checked = false;
     $('#endCombo').attr('disabled', false);
 
+    $('#jqdEnd').attr('disabled', true);
+    $('#jqdEnd').hide();
+    $('#numberoftimes').attr('disabled', true);
+    $('#endCombo').show();
+    $('#span_end').show();
+    $('#numberoftimes').hide();
+
     if (element == "none") {
         $('#repeaterTab').hide();
         //$('#event_Dialog').dialog( 'option', 'width', 345 );
         //$('#event_Dialog').dialog( 'option', 'height', 690 );
         $('#event_Dialog').dialog( 'option', 'width', 355 );
+        $('#endCombo').val("never");
 
-        checked = false;
+        checked = true;
         $('#endCombo').attr('disabled', true);
     } else if (element == "custom") {
+        alert("Not yet supported");
         $('#repeaterTab').show();
         $('#event_Dialog').dialog( 'option', 'width', 690 );
         checked = false;
+
+        $('#jqdEnd').attr('disabled', true);
+        $('#jqdEnd').hide();
+        $('#numberoftimes').attr('disabled', true);
+        $('#numberoftimes').hide();
+        $('#endCombo').hide();
+        $('#span_end').hide();
     } else if (element == "day") {
         $('#repeaterTab').hide();
         $('#event_Dialog').dialog('option', 'width', 355);
@@ -396,9 +603,17 @@ function showHideRepeater(element) {
         checked = true;
     }
 
-    $('#jqdTo').attr('disabled', checked);
-    $('#toTime').attr('disabled', checked);
-    $('#toampm').attr('disabled', checked);
+    if ($('#endCombo').val() == "times") {
+        $('#numberoftimes').show();
+        $('#numberoftimes').attr('disabled', false);
+    } else if ($('#endCombo').val() == "date") {
+        $('#jqdEnd').show();
+        $('#jqdEnd').attr('disabled', false);
+    }
+
+    if ($('#checkbox_allday').prop("checked") == true) {
+        hideFromTo(checked);
+    }
 }
 
 function hideFromTo(checked) {
@@ -459,6 +674,527 @@ function debugMessage() {
         "Dec: " + $("#jqbdec").prop('checked') + "\n" +
         ""
     );
+}
+
+function createEventFromHTML(days, type, eventID, params) {
+    /* TODO: This doesn't work
+     if (eventID == - 1) {
+     event.start = dateStart; // its a date string
+     event.end = dateEnd; // its a date string.
+     }
+     */
+
+    var subject = $("#input_title").val(); //the title of the event
+    var subID = $("#input_location").val(); //the subID of the event
+    var notes = $("#input_notes").val();
+
+    var temperature = $("#temperature_spinner").val();
+    var switcher = $("#switcher").prop('checked');
+    var state;
+    var decalc = $("#setDECALCIFICATION").prop('checked');
+
+    if ($('#divState_20').css('display') != 'none') {
+        state = $("#state_input_20").val();
+    } else if ($('#divState_2').css('display') != 'none') {
+        state = $("#state_input_2").prop('checked');
+    } else if ($('#divState_4').css('display') != 'none') {
+        state = $("#state_input_4").val();
+    } else if ($('#divState_16').css('display') != 'none') {
+        state = $("#state_input_16").val();
+    }
+
+    var IDID = $("#IDID").val();
+
+    var dat = $("#jqdFrom").datepicker("getDate");
+    var y = dat.getFullYear();
+    var m = dat.getMonth();
+    var d = dat.getDate();
+
+    var fromTime = $("#fromTime").val();
+    var times = fromTime.split(":");
+    var starthours = times[0];
+    var startminutes = times[1];
+
+    var dateStart = new Date(y, m, d, starthours, startminutes); //the day the event takes place
+
+    dat = $("#jqdTo").datepicker("getDate");
+    y = dat.getFullYear();
+    m = dat.getMonth();
+    d = dat.getDate();
+    var endDate = new Date(y, m, d);
+
+    var toTime = $("#toTime").val();
+    times = toTime.split(":");
+    var endhours = times[0];
+    var endminutes = times[1];
+
+    var dateEnd = new Date(y, m, d, endhours, endminutes); //the day the event finishes
+
+    var allDay = $("#checkbox_allday").prop('checked'); //true: event all day, False:event from time to time
+    var color = $('#colorPicker').data("plugin_tinycolorpicker").colorHex;
+
+    var repeatingEvents = new Array();
+    var newStart;
+
+    for (var i = 0; i <= days; i++) {
+        var day = dateStart.getDate();
+        var month = dateStart.getMonth();
+        var year = dateStart.getYear() + 1900;
+        var datum = new Date(year, month, day, starthours, startminutes); //the day the event takes place 
+
+        if (type == "month") {
+            var yx = datum.getYear() + 1900;
+            var mx = datum.getMonth() + i;
+            var dx = datum.getDate();
+            var mmx = datum.getMinutes();
+            var hx = datum.getHours();
+            newStart = new Date(yx, mx, dx, hx, mmx);
+        } else if (type == "day") {
+            newStart = new Date(datum.getTime() + i * 24 * 60 * 60 * 1000);
+        } else if (type == "week") {
+            newStart = new Date(datum.getTime() + i * 24 * 60 * 60 * 1000 * 7);
+        } else if (type == "year") {
+            var yx = datum.getYear() + 1900 + i;
+            var mx = datum.getMonth();
+            var dx = datum.getDate();
+            var mmx = datum.getMinutes();
+            var hx = datum.getHours();
+            newStart = new Date(yx, mx, dx, hx, mmx);
+        } else if (type == "single") {
+            newStart = dateStart;
+        } else if (type == "weekday") {
+            for (var d in params) {
+                var wday = params[d];
+                if (wday == false) {
+                    console.log("nothing todo");
+                } else {
+                    alert("wday = " + wday);
+                    alert("datum = " + datum);
+                    var pDatum = datum;
+                    var day = new Date(nextDay(pDatum, wday)).toLocaleDateString();
+                    alert("day = " + day);
+                }
+            }
+        }
+
+        day = dateEnd.getDate();
+        month = dateEnd.getMonth();
+        year = dateEnd.getYear() + 1900;
+        datum = new Date(year, month, day, endhours, endminutes); //the day the event takes place  
+
+        if (type == "month") {
+            /* BugFix: set Month correctly */
+            var newEnd = new Date(datum.getTime());
+            var yx = datum.getYear() + 1900;
+            var mx = datum.getMonth() + i;
+            var dx = datum.getDate();
+            var mmx = datum.getMinutes();
+            var hx = datum.getHours();
+            var newEnd = new Date(yx, mx, dx, hx, mmx);
+        } else if (type == "day") {
+            var newEnd = new Date(datum.getTime() + i * 24 * 60 * 60 * 1000);
+        } else if (type == "week") {
+            var newEnd = new Date(datum.getTime() + i * 24 * 60 * 60 * 1000 * 7);
+        } else if (type == "year") {
+            var yx = datum.getYear() + 1900 + i;
+            var mx = datum.getMonth();
+            var dx = datum.getDate();
+            var mmx = datum.getMinutes();
+            var hx = datum.getHours();
+            var newEnd = new Date(yx, mx, dx, hx, mmx);
+        } else if (type == "single") {
+            var newEnd = dateEnd;
+        }
+
+        // New Event 
+        event = new Object();
+        event.title = subject;
+        event.start = newStart; // its a date string 
+        event.end = newEnd; // its a date string. 
+        event.color = color;
+        event.allDay = allDay;
+        event.id = eventID;
+        event.notes = notes;
+        event.temperature = temperature;
+        event.switcher = switcher;
+        event.state = state;
+        event.decalc = decalc;
+
+        event.IDID = IDID;
+
+        var editable;
+        if (i == 0) {
+            editable = true;
+            event.tooltip = "This is a recurring Event.";
+        } else {
+            editable = false;
+            event.title = subject + " (Repeated Event)";
+            event.tooltip = "This is a recurring Event.\n\nThe original Event can be found at\n" + dateStart;
+        }
+        event.editable = editable;
+        event.startEditable = editable;
+        event.durationEditable = editable;
+        // TODO: ADD PRIVATE OBJECTS TO EVENT 
+        updatePrivateFields(event);
+        // TODO: RenderEvent when all Objects loaded 
+        // $('#calendar').fullCalendar('renderEvent', event); 
+        repeatingEvents.push(event);
+    }
+
+    $('#calendar').fullCalendar('addEventSource', repeatingEvents);
+    $('#calendar').fullCalendar('rerenderEvents');
+}
+
+function createEvent(ev, days, type, eventID, params) {
+    var subject = ev.title; //the title of the event
+    var notes = ev.notes;
+
+    var temperature = ev.temperature;
+    var switcher = ev.switcher;
+    var state = ev.state;
+    var decalc = ev.decalc;
+
+    var IDID = ev.IDID;
+
+    var dat = new Date(ev.start);
+    var y = dat.getFullYear();
+    var m = dat.getMonth();
+    var d = dat.getDate();
+    var starthours = dat.getHours();
+    var startminutes = dat.getMinutes();
+
+    var dateStart = new Date(y, m, d, starthours, startminutes); //the day the event takes place
+
+    dat = new Date(ev.end);
+    y = dat.getFullYear();
+    m = dat.getMonth();
+    d = dat.getDate();
+
+    var endhours = dat.getHours();
+    var endminutes = dat.getMinutes();
+
+    var dateEnd = new Date(y, m, d, endhours, endminutes); //the day the event finishes
+
+    var allDay = ev.allDay; //true: event all day, False:event from time to time
+    //var color = $('#colorPicker').data("plugin_tinycolorpicker").colorHex;
+    var color = ev.color;
+
+    var repeatingEvents = new Array();
+    var newStart;
+
+    for (var i = 0; i <= days; i++) {
+        var day = dateStart.getDate();
+        var month = dateStart.getMonth();
+        var year = dateStart.getYear() + 1900;
+        var datum = new Date(year, month, day, starthours, startminutes); //the day the event takes place 
+
+        if (type == "month") {
+            var yx = datum.getYear() + 1900;
+            var mx = datum.getMonth() + i;
+            var dx = datum.getDate();
+            var mmx = datum.getMinutes();
+            var hx = datum.getHours();
+            newStart = new Date(yx, mx, dx, hx, mmx);
+        } else if (type == "day") {
+            newStart = new Date(datum.getTime() + i * 24 * 60 * 60 * 1000);
+        } else if (type == "week") {
+            newStart = new Date(datum.getTime() + i * 24 * 60 * 60 * 1000 * 7);
+        } else if (type == "year") {
+            var yx = datum.getYear() + 1900 + i;
+            var mx = datum.getMonth();
+            var dx = datum.getDate();
+            var mmx = datum.getMinutes();
+            var hx = datum.getHours();
+            newStart = new Date(yx, mx, dx, hx, mmx);
+        } else if (type == "single") {
+            newStart = dateStart;
+        } else if (type == "weekday") {
+            for (var d in params) {
+                var wday = params[d];
+                if (wday == false) {
+                    console.log("nothing todo");
+                } else {
+                    alert("wday = " + wday);
+                    alert("datum = " + datum);
+                    var pDatum = datum;
+                    var day = new Date(nextDay(pDatum, wday)).toLocaleDateString();
+                    alert("day = " + day);
+                }
+            }
+        }
+
+        day = dateEnd.getDate();
+        month = dateEnd.getMonth();
+        year = dateEnd.getYear() + 1900;
+        datum = new Date(year, month, day, endhours, endminutes); //the day the event takes place  
+
+        if (type == "month") {
+            /* BugFix: set Month correctly */
+            var newEnd = new Date(datum.getTime());
+            var yx = datum.getYear() + 1900;
+            var mx = datum.getMonth() + i;
+            var dx = datum.getDate();
+            var mmx = datum.getMinutes();
+            var hx = datum.getHours();
+            var newEnd = new Date(yx, mx, dx, hx, mmx);
+        } else if (type == "day") {
+            var newEnd = new Date(datum.getTime() + i * 24 * 60 * 60 * 1000);
+        } else if (type == "week") {
+            var newEnd = new Date(datum.getTime() + i * 24 * 60 * 60 * 1000 * 7);
+        } else if (type == "year") {
+            var yx = datum.getYear() + 1900 + i;
+            var mx = datum.getMonth();
+            var dx = datum.getDate();
+            var mmx = datum.getMinutes();
+            var hx = datum.getHours();
+            var newEnd = new Date(yx, mx, dx, hx, mmx);
+        } else if (type == "single") {
+            var newEnd = dateEnd;
+        }
+
+        // New Event 
+        var event = new Object();
+        event.title = subject;
+        event.start = newStart; // its a date string 
+        event.end = newEnd; // its a date string. 
+        event.color = color;
+        event.allDay = allDay;
+        event.id = eventID;
+        event.notes = notes;
+        event.temperature = temperature;
+        event.switcher = switcher;
+        event.state = state;
+        event.decalc = decalc;
+
+        event.IDID = IDID;
+
+        var editable;
+        if (i == 0) {
+            editable = true;
+            event.tooltip = "This is a recurring Event.";
+        } else {
+            editable = false;
+            event.title = subject + " (Repeated Event)";
+            event.tooltip = "This is a recurring Event.\n\nThe original Event can be found at\n" + dateStart;
+        }
+        event.editable = editable;
+        event.startEditable = editable;
+        event.durationEditable = editable;
+        // TODO: ADD PRIVATE OBJECTS TO EVENT 
+        updatePrivateFields(event);
+        // TODO: RenderEvent when all Objects loaded 
+        // $('#calendar').fullCalendar('renderEvent', event); 
+        repeatingEvents.push(event);
+    }
+
+    $('#calendar').fullCalendar('addEventSource', repeatingEvents);
+    $('#calendar').fullCalendar('rerenderEvents');
+}
+
+function updateEvent(eventID) {
+    var repeatEnd = new Date($("#jqdEnd").val());
+
+    var dat = $("#jqdFrom").datepicker("getDate");
+    var y = dat.getFullYear();
+    var m = dat.getMonth();
+    var d = dat.getDate();
+    var startDate = new Date(y, m, d);
+
+    // Todo: Check if repeaterCombo is custom...
+    if ($("#repeaterCombo").val() == "custom") {
+        var combo = $("#repeaterTab").tabs('option', 'active');
+        alert("combo = " + combo);
+        if (combo == 0) {
+            var days = $("#dailyinput").val();
+            alert("days = " + days);
+            createEventFromHTML(days, "day", eventID);
+        } else if (combo == 1) {
+            var days = $("#weeklyinput").val();
+            var mon = $('#jqbmonday').prop('checked') ? $('#jqbmonday').val() : false;
+            var tue = $('#jqbtuesday').prop('checked') ? $('#jqbtuesday').val() : false;
+            var wed = $('#jqbwednesday').prop('checked') ? $('#jqbwednesday').val() : false;
+            var thu = $('#jqbthursday').prop('checked') ? $('#jqbthursday').val(): false;
+            var fri = $('#jqbfriday').prop('checked') ? $('#jqbfriday').val() : false;
+            var sat = $('#jqbsaturday').prop('checked') ? $('#jqbsaturday').val() : false;
+            var sun = $('#jqbsunday').prop('checked') ? $('#jqbsunday').val() : false;
+            var weekdays = [mon, tue, wed, thu, fri, sat, sun];
+            alert(weekdays);
+            createEventFromHTML(0, "weekday", eventID, weekdays);
+        } else if (combo == 2) {
+            var days = $("#monthlyinput").val();
+            var onEach = $('#monthlygroup1').prop('checked');
+            if (onEach == true) {
+                jQuery("input[name='button_monthly']").each(function() {
+                    alert( this.value + ":" + this.checked );
+                });
+            } else {
+                var monthlycombofirst = $('#monthlycombofirst').val();
+                var monthlycombosecond = $('#monthlycombosecond').val();
+                alert(monthlycombofirst);
+                alert(monthlycombosecond);
+            }
+        } else if (combo == 3) {
+
+        }
+    } else {
+        if ($("#endCombo").val() == "times") {
+            createEventFromHTML($('#numberoftimes').val(), $("#repeaterCombo").val(), eventID);
+        } else if ($("#endCombo").val() == "date") {
+            if ($("#repeaterCombo").val() == "day") {
+                // Create events until End $("#endCombo").val() + " " + $("#jqdEnd").val()
+                var days = (repeatEnd - startDate) / 1000 / 60 / 60 / 24;
+                createEventFromHTML(days, "day", eventID);
+            } else if ($("#repeaterCombo").val() == "week") {
+                var days = (repeatEnd - startDate) / 1000 / 60 / 60 / 24 / 7;
+                createEventFromHTML(days, "week", eventID);
+            } else if ($("#repeaterCombo").val() == "month") {
+                var days = (repeatEnd.getMonth() - startDate.getMonth());
+                createEventFromHTML(days, "month", eventID);
+            } else if ($("#repeaterCombo").val() == "year") {
+                var days = (repeatEnd.getYear() - startDate.getYear());
+                createEventFromHTML(days, "year", eventID);
+            }
+        } else {
+            createEventFromHTML(0, "single", eventID);
+        }
+    }
+}
+
+function updatePrivateFields(event) {
+    if ($('#divState_20').css('display') != 'none') {
+        event.state = $("#state_input_20").val();
+    } else if ($('#divState_2').css('display') != 'none') {
+        event.state = $("#state_input_2").prop('checked');
+    } else if ($('#divState_4').css('display') != 'none') {
+        event.state = $("#state_input_4").val();
+    } else if ($('#divState_16').css('display') != 'none') {
+        event.state = $("#state_input_16").val();
+    }
+
+    event.numberoftimes = $("#numberoftimes").val();
+    event.repeaterCombo = $("#repeaterCombo").val();
+    event.endCombo = $("#endCombo").val();
+    event.jqdFrom = $("#jqdFrom").val();
+    event.jqdEnd = $("#jqdEnd").val();
+    event.repeaterTab = $("#repeaterTab").tabs('option', 'active');
+    event.dailyinput = $("#dailyinput").val();
+    event.weeklyinput = $("#weeklyinput").val();
+    if ($("#jqbmonday").prop('checked'))
+        event.jqbmonday = $("#jqbmonday").prop('checked');
+    if ($("#jqbtuesday").prop('checked'))
+        event.jqbtuesday = $("#jqbtuesday").prop('checked');
+    if ($("#jqbwednesday").prop('checked'))
+        event.jqbwednesday = $("#jqbwednesday").prop('checked');
+    if ($("#jqbthursday").prop('checked'))
+        event.jqbthursday = $("#jqbthursday").prop('checked');
+    if ($("#jqbfriday").prop('checked'))
+        event.jqbfriday = $("#jqbfriday").prop('checked');
+    if ($("#jqbsaturday").prop('checked'))
+        event.jqbsaturday = $("#jqbsaturday").prop('checked');
+    if ($("#jqbsunday").prop('checked'))
+        event.jqbsunday = $("#jqbsunday").prop('checked');
+    event.monthlyinput = $("#monthlyinput").val();
+    if ($("#monthlygroup1").prop('checked'))
+        event.monthlygroup1 = $("#monthlygroup1").prop('checked');
+    if ($("#monthlygroup2").prop('checked'))
+        event.monthlgroup2 = $("#monthlygroup2").prop('checked');
+
+    event.monthlycombofirst = $("#monthlycombofirst").val();
+    event.monthlycombosecond = $("#monthlycombosecond").val();
+    if ($("#jqb1").prop('checked'))
+        event.jqb1 = $("#jqb1").prop('checked');
+    if ($("#jqb2").prop('checked'))
+        event.jqb2 = $("#jqb2").prop('checked');
+    if ($("#jqb3").prop('checked'))
+        event.jqb3 = $("#jqb3").prop('checked');
+    if ($("#jqb4").prop('checked'))
+        event.jqb4 = $("#jqb4").prop('checked');
+    if ($("#jqb5").prop('checked'))
+        event.jqb5 = $("#jqb5").prop('checked');
+    if ($("#jqb6").prop('checked'))
+        event.jqb6 = $("#jqb6").prop('checked');
+    if ($("#jqb7").prop('checked'))
+        event.jqb7 = $("#jqb7").prop('checked');
+    if ($("#jqb8").prop('checked'))
+        event.jqb8 = $("#jqb8").prop('checked');
+    if ($("#jqb9").prop('checked'))
+        event.jqb9 = $("#jqb9").prop('checked');
+    if ($("#jqb10").prop('checked'))
+        event.jqb10 = $("#jqb10").prop('checked');
+    if ($("#jqb11").prop('checked'))
+        event.jqb11 = $("#jqb11").prop('checked');
+    if ($("#jqb12").prop('checked'))
+        event.jqb12 = $("#jqb12").prop('checked');
+    if ($("#jqb13").prop('checked'))
+        event.jqb13 = $("#jqb13").prop('checked');
+    if ($("#jqb14").prop('checked'))
+        event.jqb14 = $("#jqb14").prop('checked');
+    if ($("#jqb15").prop('checked'))
+        event.jqb15 = $("#jqb15").prop('checked');
+    if ($("#jqb16").prop('checked'))
+        event.jqb16 = $("#jqb16").prop('checked');
+    if ($("#jqb17").prop('checked'))
+        event.jqb17 = $("#jqb17").prop('checked');
+    if ($("#jqb18").prop('checked'))
+        event.jqb18 = $("#jqb18").prop('checked');
+    if ($("#jqb19").prop('checked'))
+        event.jqb19 = $("#jqb19").prop('checked');
+    if ($("#jqb20").prop('checked'))
+        event.jqb20 = $("#jqb20").prop('checked');
+    if ($("#jqb21").prop('checked'))
+        event.jqb21 = $("#jqb21").prop('checked');
+    if ($("#jqb22").prop('checked'))
+        event.jqb22 = $("#jqb22").prop('checked');
+    if ($("#jqb23").prop('checked'))
+        event.jqb23 = $("#jqb23").prop('checked');
+    if ($("#jqb24").prop('checked'))
+        event.jqb24 = $("#jqb24").prop('checked');
+    if ($("#jqb25").prop('checked'))
+        event.jqb25 = $("#jqb25").prop('checked');
+    if ($("#jqb26").prop('checked'))
+        event.jqb26 = $("#jqb26").prop('checked');
+    if ($("#jqb27").prop('checked'))
+        event.jqb27 = $("#jqb27").prop('checked');
+    if ($("#jqb28").prop('checked'))
+        event.jqb28 = $("#jqb28").prop('checked');
+    if ($("#jqb29").prop('checked'))
+        event.jqb29 = $("#jqb29").prop('checked');
+    if ($("#jqb30").prop('checked'))
+        event.jqb30 = $("#jqb30").prop('checked');
+    if ($("#jqb31").prop('checked'))
+        event.jqb31 = $("#jqb31").prop('checked');
+    event.yearlyinput = $("#yearlyinput").val();
+    if ($("#yearlygroup1").prop('checked'))
+        event.yearlygroup1 = $("#yearlygroup1").prop('checked');
+    if ($("#yearlygroup2").prop('checked'))
+        event.yearlygroup2 = $("#yearlygroup2").prop('checked');
+    event.yearlycombofirst = $("#yearlycombofirst").val();
+    event.yearlycombosecond = $("#yearlycombosecond").val();
+    if ($("#jqbjan").prop('checked'))
+        event.jqbjan = $("#jqbjan").prop('checked');
+    if ($("#jqbfeb").prop('checked'))
+        event.jqbfeb = $("#jqbfeb").prop('checked');
+    if ($("#jqbmar").prop('checked'))
+        event.jqbmar = $("#jqbmar").prop('checked');
+    if ($("#jqbapr").prop('checked'))
+        event.jqbapr = $("#jqbapr").prop('checked');
+    if ($("#jqbmay").prop('checked'))
+        event.jqbmay = $("#jqbmay").prop('checked');
+    if ($("#jqbjun").prop('checked'))
+        event.jqbjun = $("#jqbjun").prop('checked');
+    if ($("#jqbjul").prop('checked'))
+        event.jqbjul = $("#jqbjul").prop('checked');
+    if ($("#jqbaug").prop('checked'))
+        event.jqbaug = $("#jqbaug").prop('checked');
+    if ($("#jqbsep").prop('checked'))
+        event.jqbsep = $("#jqbsep").prop('checked');
+    if ($("#jqboct").prop('checked'))
+        event.jqboct = $("#jqboct").prop('checked');
+    if ($("#jqbnov").prop('checked'))
+        event.jqbnov = $("#jqbnov").prop('checked');
+    if ($("#jqbdec").prop('checked'))
+        event.jqbdec = $("#jqbdec").prop('checked');
+
 }
 
 $(function() {
@@ -558,65 +1294,12 @@ $(function() {
         $("#toampm").show();
         $("#span_to").show();
     });
-
-    $( "#select_options" ).button().on( "click", function() {
-        $('#selectSingle').hide();
-        $('#selectMultiple').show();
-
-        dialogioptions = $( "#dialog-form" ).dialog({
-            autoOpen: false,
-            height: 335,
-            width: 400,
-            modal: true,
-            buttons: {
-                Reload: function() {
-                    getData( function() {
-                        // Todo: set all marked allelements ID back
-                        // cause after reload, all are away
-                        var allElements = $('#allelements').val();
-
-                        allEvents = new Array();
-                        $('#allelements').multiselect("uncheckAll");
-
-                        readEventsFromFile();
-
-                        var valArr = allElements;
-                        i = 0, size = valArr.length, $options = $('#allelements option');
-
-                        for(i; i < size; i++){
-                            $options.filter('[value="'+valArr[i]+'"]').prop('selected', true);
-                        }
-                        $("#allelements").multiselect("refresh");
-
-                        //dialogioptions.dialog( "close" );
-                    });
-                },
-                Close: function() {
-                    dialogioptions.dialog( "close" );
-                }
-            },
-            close: function() {
-            }
-        });
-
-        dialogioptions.dialog( "open" );
-    });
 });
 
-
-function putParamsets(objectID, params) {
-    rpcClient.methodCall('putParamset', [rpcInitString, adapter.namespace], [objectID, 'MASTER', params], function (err, data) {
-        if (!err) {
-            adapter.log.info("getParamset was successfull");
-            adapter.log.info(JSON.stringify(data));
-        } else {
-            adapter.log.error(err);
-        }
-    });
-}
-
 $(document).ready(function() {
-    $( "#dialog" ).dialog( "open" );
+
+    createTypes();
+
     servConn.init(null, {
         onConnChange: function (isConnected) {
             progressbar.progressbar("value", progval + 2);
@@ -704,36 +1387,12 @@ $(document).ready(function() {
                 };
                 $("#jQuerySpinner1").spinner(jQuerySpinner1Opts);
 
-                $("#jqb1").button();
-                $("#jqb2").button();
-                $("#jqb3").button();
-                $("#jqb4").button();
-                $("#jqb5").button();
-                $("#jqb6").button();
-                $("#jqb7").button();
-                $("#jqb8").button();
-                $("#jqb9").button();
-                $("#jqb10").button();
-                $("#jqb11").button();
-                $("#jqb12").button();
-                $("#jqb13").button();
-                $("#jqb14").button();
-                $("#jqb15").button();
-                $("#jqb16").button();
-                $("#jqb17").button();
-                $("#jqb18").button();
-                $("#jqb19").button();
-                $("#jqb20").button();
-                $("#jqb21").button();
-                $("#jqb22").button();
-                $("#jqb23").button();
-                $("#jqb24").button();
-                $("#jqb25").button();
-                $("#jqb26").button();
-                $("#jqb27").button();
-                $("#jqb28").button();
-                $("#jqb29").button();
-                $("#jqb30").button();
+                $("#jqb1").button();$("#jqb2").button();$("#jqb3").button();$("#jqb4").button();$("#jqb5").button();
+                $("#jqb6").button();$("#jqb7").button();$("#jqb8").button();$("#jqb9").button();$("#jqb10").button();
+                $("#jqb11").button();$("#jqb12").button();$("#jqb13").button();$("#jqb14").button();$("#jqb15").button();
+                $("#jqb16").button();$("#jqb17").button();$("#jqb18").button();$("#jqb19").button();$("#jqb20").button();
+                $("#jqb21").button();$("#jqb22").button();$("#jqb23").button();$("#jqb24").button();$("#jqb25").button();
+                $("#jqb26").button();$("#jqb27").button();$("#jqb28").button();$("#jqb29").button();$("#jqb30").button();
                 $("#jqb31").button();
 
                 $("#jqbmonday").button();
@@ -764,6 +1423,39 @@ $(document).ready(function() {
                 $("#button_delete").button();
                 $("#button_cancel").button();
 
+                $("#button_reset").button();
+
+                $("#button_reset").click(function () {
+                    $('#divTemperature').hide();
+                    $('#divSpinner').hide();
+                    $('#divSwitch').hide();
+                    $('#div_Script').hide();
+                    $("#divState_Generic").show();
+
+                    $("#input_title").val("Title");
+                    $("#input_location").val("Object");
+                    $("#input_notes").val("Set some descriptive Notes...");
+                    $("#switcher").prop("checked", false);
+                    $("#checkbox_allday").prop("checked", false);
+                    $('#jqdFrom').attr('disabled', false);
+                    $('#jqdTo').attr('disabled', false);
+                    $('#fromTime').attr('disabled', false);
+                    $('#toTime').attr('disabled', false);
+                    $('#fromampm').attr('disabled', false);
+                    $('#toampm').attr('disabled', false);
+                    $('#repeaterCombo').val('none');
+                    $('#endCombo').val('never');
+                    $('#endCombo').attr('disabled', true);
+
+                    $('#numberoftimes').val(0);
+                    $('#numberoftimes').hide();
+                    $('#numberoftimes').attr('disabled', true);
+
+                    $('#jqdEnd').val(new Date().toLocaleDateString());
+                    $('#jqdEnd').hide();
+                    $('#jqdEnd').attr('disabled', true);
+                });
+
                 $("#button_delete").click(function () {
                     var eventID = $('#eventID').val();
                     if (eventID != "-1") {
@@ -772,7 +1464,7 @@ $(document).ready(function() {
                         $('#calendar').fullCalendar('removeEvents', eventID);
                         $('#calendar').fullCalendar('rerenderEvents');
 
-                        parseEvents(localID[0], "delete", localID[0].section);
+                        parseEvents(localID[0], "delete", localID[0].IDID);
 
                         $("#event_Dialog").dialog('close');
                         $('#calendar').fullCalendar('rerenderEvents');
@@ -792,9 +1484,14 @@ $(document).ready(function() {
                         height: 400,
                         width: 400,
                         modal: true,
+                        closeOnEscape: false,
                         buttons: {
                             Cancel: function () {
                                 dialogoptions.dialog("close");
+
+                                if ($("#input_location").val() == "Object") {
+                                    $("#divState_Generic").show();
+                                }
                             }
                         },
                         close: function () {
@@ -812,7 +1509,7 @@ $(document).ready(function() {
                     $("#allelement").multiselect("refresh");
 
                     dialogoptions.dialog("open");
-
+                    $("#divState_Generic").hide();
                 });
 
                 $("#button_save").click(function () {
@@ -820,8 +1517,7 @@ $(document).ready(function() {
 
                     var allEV = $("#calendar").fullCalendar('clientEvents');
                     var eventID = $('#eventID').val();
-                    //alert("save eventID: "+eventID);
-                    if (eventID != "-1") {
+                    if (eventID != "-1" && eventID != undefined) {
                         // Edit Mode
                         $('#calendar').fullCalendar('removeEvents', eventID);
                         updateEvent(eventID);
@@ -833,14 +1529,21 @@ $(document).ready(function() {
                     }
 
                     var event  = $("#calendar").fullCalendar('clientEvents', eventID);
-                    /* TODO: HM-CC-TC, HM-CC-RT-DN and Max! can only save one Week */
-                    if (event[0].IDTYPE != "HM-CC-TC" && event[0].IDTYPE != "HM-CC-RT-DN" && event[0].type != "BC-RT-TRX-CyG-3" ) {
-                        saveEventToObject(event[0], "save");
+
+                    var thermostatArray = objects["system.adapter.occ.0"];
+                    if (thermostatArray != undefined) {
+                        var addr = event[0].IDID.split(".");
+                        addr = addr[0]+"."+addr[1]+"."+addr[2];
+                        var parent = objects[addr];
+                        if (thermostatArray.native != undefined && thermostatArray.native.thermostat != undefined && thermostatArray.native.thermostat[parent.TYPE] == undefined) {
+                            saveEventToObject(event[0], "save");
+                        }
                     }
 
                     $('#calendar').fullCalendar('rerenderEvents');
                     $("#event_Dialog").dialog('close');
-                    writeEventsToFile(event[0], event[0].section);
+                    // TODO: Remove Function
+                    //writeEventsToFile(event[0], event[0].IDID);
                 });
 
                 $("#button_submit").click(function () {
@@ -848,7 +1551,7 @@ $(document).ready(function() {
 
                     var allEV = $("#calendar").fullCalendar('clientEvents');
                     var eventID = $('#eventID').val();
-
+                    //alert(eventID);
                     if (eventID != "-1") {
                         // Edit Mode
                         $('#calendar').fullCalendar('removeEvents', eventID);
@@ -860,335 +1563,25 @@ $(document).ready(function() {
                         updateEvent(eventID);
                     }
 
-                    // Get all Events which have same section
+                    // Get all Events which have same IDID
                     var event  = $("#calendar").fullCalendar('clientEvents', eventID);
-                    var section = event[0].section;
+                    var obj = objects[eventID];
+                    var IDID = event[0].IDID;
                     var array = new Array();
 
                     for (var i=0; i<allEV.length;i++) {
                         var tmpEvent = allEV[i];
-                        if (tmpEvent.section == section) {
+                        if (tmpEvent.IDID == IDID) {
                             delete tmpEvent.source;
                             array.push(tmpEvent);
                         }
                     }
-                    /* TODO: HM-CC-TC, HM-CC-RT-DN and Max! can only save one Week */
-                    //if (event[0].IDTYPE == "HM-CC-TC" || event[0].IDTYPE == "HM-CC-RT-DN" || event[0].type == "BC-RT-TRX-CyG-3" ) {
                     saveEventToObject(array, "submit");
-                    //}
-                    writeEventsToFile(event[0], event[0].section);
-
+                    // TODO: Remove Function
+                    (event[0], event[0].IDID);
+                    //writeEventsToFile
                     $("#event_Dialog").dialog('close');
                 });
-
-                function createEvent(days, type, eventID) {
-                    /* TODO: This doesn't work
-                     if (eventID == - 1) {
-                     event.start = dateStart; // its a date string
-                     event.end = dateEnd; // its a date string.
-                     }
-                     */
-
-                    var subject = $("#input_title").val(); //the title of the event
-                    var section = $("#input_location").val(); //the section of the event
-                    var notes = $("#input_notes").val();
-
-                    var temperature = $("#temperature_spinner").val();
-                    var switcher = $("#switcher").prop('checked');
-                    var state;
-
-                    if ($('#divState_20').css('display') != 'none') {
-                        state = $("#state_input_20").val();
-                    } else if ($('#divState_2').css('display') != 'none') {
-                        state = $("#state_input_2").prop('checked');
-                    } else if ($('#divState_4').css('display') != 'none') {
-                        state = $("#state_input_4").val();
-                    } else if ($('#divState_16').css('display') != 'none') {
-                        state = $("#state_input_16").val();
-                    }
-
-                    var IDID = $("#IDID").val();
-                    var IDPARENT = $("#IDPARENT").val();
-                    var IDTYPE = $("#IDTYPE").val();
-
-                    var dat = $("#jqdFrom").datepicker("getDate");
-                    var y = dat.getFullYear();
-                    var m = dat.getMonth();
-                    var d = dat.getDate();
-
-                    var fromTime = $("#fromTime").val();
-                    var times = fromTime.split(":");
-                    var starthours = times[0];
-                    var startminutes = times[1];
-
-                    var dateStart = new Date(y, m, d, starthours, startminutes); //the day the event takes place
-
-                    dat = $("#jqdTo").datepicker("getDate");
-                    y = dat.getFullYear();
-                    m = dat.getMonth();
-                    d = dat.getDate();
-                    var endDate = new Date(y, m, d);
-
-                    var toTime = $("#toTime").val();
-                    times = toTime.split(":");
-                    var endhours = times[0];
-                    var endminutes = times[1];
-
-                    var dateEnd = new Date(y, m, d, endhours, endminutes); //the day the event finishes
-
-                    var allDay = $("#checkbox_allday").prop('checked'); //true: event all day, False:event from time to time
-                    var color = $('#colorPicker').data("plugin_tinycolorpicker").colorHex;
-
-                    var repeatingEvents = new Array();
-
-                    for (var i = 0; i <= days; i++) {
-                        var day = dateStart.getDate();
-                        var month = dateStart.getMonth();
-                        var year = dateStart.getYear() + 1900;
-                        var datum = new Date(year, month, day, starthours, startminutes); //the day the event takes place 
-
-                        if (type == "month") {
-                            var yx = datum.getYear() + 1900;
-                            var mx = datum.getMonth() + i;
-                            var dx = datum.getDate();
-                            var mmx = datum.getMinutes();
-                            var hx = datum.getHours();
-                            var newStart = new Date(yx, mx, dx, hx, mmx);
-                        } else if (type == "day") {
-                            var newStart = new Date(datum.getTime() + i * 24 * 60 * 60 * 1000);
-                        } else if (type == "week") {
-                            var newStart = new Date(datum.getTime() + i * 24 * 60 * 60 * 1000 * 7);
-                        } else if (type == "year") {
-                            var yx = datum.getYear() + 1900 + i;
-                            var mx = datum.getMonth();
-                            var dx = datum.getDate();
-                            var mmx = datum.getMinutes();
-                            var hx = datum.getHours();
-                            var newStart = new Date(yx, mx, dx, hx, mmx);
-                        } else if (type == "single") {
-                            var newStart = dateStart;
-                        }
-
-                        day = dateEnd.getDate();
-                        month = dateEnd.getMonth();
-                        year = dateEnd.getYear() + 1900;
-                        datum = new Date(year, month, day, endhours, endminutes); //the day the event takes place  
-
-                        if (type == "month") {
-                            /* BugFix: set Month correctly */
-                            var newEnd = new Date(datum.getTime());
-                            var yx = datum.getYear() + 1900;
-                            var mx = datum.getMonth() + i;
-                            var dx = datum.getDate();
-                            var mmx = datum.getMinutes();
-                            var hx = datum.getHours();
-                            var newEnd = new Date(yx, mx, dx, hx, mmx);
-                            /* BugFix: set Month correctly */
-                        } else if (type == "day") {
-                            var newEnd = new Date(datum.getTime() + i * 24 * 60 * 60 * 1000);
-                        } else if (type == "week") {
-                            var newEnd = new Date(datum.getTime() + i * 24 * 60 * 60 * 1000 * 7);
-                        } else if (type == "year") {
-                            var yx = datum.getYear() + 1900 + i;
-                            var mx = datum.getMonth();
-                            var dx = datum.getDate();
-                            var mmx = datum.getMinutes();
-                            var hx = datum.getHours();
-                            var newEnd = new Date(yx, mx, dx, hx, mmx);
-                        } else if (type == "single") {
-                            var newEnd = dateEnd;
-                        }
-
-                        //alert(dateStart + "---" + newStart + "---" + newEnd);
-                        // New Event 
-                        event = new Object();
-                        event.title = subject;
-                        event.section = section;
-                        event.start = newStart; // its a date string 
-                        event.end = newEnd; // its a date string. 
-                        event.color = color;
-                        event.allDay = allDay;
-                        event.id = eventID;
-                        event.notes = notes;
-                        event.temperature = temperature;
-                        event.switcher = switcher;
-                        event.state = state;
-
-                        event.IDID = IDID;
-                        event.IDTYPE = IDTYPE;
-                        event.IDPARENT = IDPARENT;
-
-                        var editable;
-                        // alert(i); 
-                        if (i == 0) {
-                            editable = true;
-                            event.tooltip = "This is a recurring Event.";
-                        } else {
-                            editable = false;
-                            event.title = subject + " (Repeated Event)";
-                            event.tooltip = "This is a recurring Event.\n\nThe original Event can be found at\n" + dateStart;
-                        }
-                        event.editable = editable;
-                        event.startEditable = editable;
-                        event.durationEditable = editable;
-                        // TODO: ADD PRIVATE OBJECTS TO EVENT 
-                        updatePrivateFields(event);
-                        // TODO: RenderEvent when all Objects loaded 
-                        // $('#calendar').fullCalendar('renderEvent', event); 
-                        repeatingEvents.push(event);
-                    }
-
-                    $('#calendar').fullCalendar('addEventSource', repeatingEvents);
-                    $('#calendar').fullCalendar('rerenderEvents');
-                }
-
-                function updateEvent(eventID) {
-                    var repeatEnd = new Date($("#jqdEnd").val());
-
-                    var dat = $("#jqdFrom").datepicker("getDate");
-                    var y = dat.getFullYear();
-                    var m = dat.getMonth();
-                    var d = dat.getDate();
-                    var startDate = new Date(y, m, d);
-
-                    if ($("#endCombo").val() == "times") {
-                        createEvent($('#numberoftimes').val(), $("#repeaterCombo").val(), eventID);
-                    } else if ($("#endCombo").val() == "date") {
-                        if ($("#repeaterCombo").val() == "day") {
-                            // Create events until End $("#endCombo").val() + " " + $("#jqdEnd").val()
-                            var days = (repeatEnd - startDate) / 1000 / 60 / 60 / 24;
-                            createEvent(days, "day", eventID);
-                        }
-                    } else {
-                        createEvent(0, "single", eventID);
-                    }
-                }
-
-                function updatePrivateFields(event) {
-                    event.numberoftimes = $("#numberoftimes").val();
-                    event.repeaterCombo = $("#repeaterCombo").val();
-                    event.endCombo = $("#endCombo").val();
-                    event.jqdEnd = $("#jqdEnd").val();
-                    event.repeaterTab = $("#repeaterTab").tabs('option', 'active');
-                    event.dailyinput = $("#dailyinput").val();
-                    event.weeklyinput = $("#weeklyinput").val();
-                    if ($("#jqbmonday").prop('checked'))
-                        event.jqbmonday = $("#jqbmonday").prop('checked');
-                    if ($("#jqbtuesday").prop('checked'))
-                        event.jqbtuesday = $("#jqbtuesday").prop('checked');
-                    if ($("#jqbwednesday").prop('checked'))
-                        event.jqbwednesday = $("#jqbwednesday").prop('checked');
-                    if ($("#jqbthursday").prop('checked'))
-                        event.jqbthursday = $("#jqbthursday").prop('checked');
-                    if ($("#jqbfriday").prop('checked'))
-                        event.jqbfriday = $("#jqbfriday").prop('checked');
-                    if ($("#jqbsaturday").prop('checked'))
-                        event.jqbsaturday = $("#jqbsaturday").prop('checked');
-                    if ($("#jqbsunday").prop('checked'))
-                        event.jqbsunday = $("#jqbsunday").prop('checked');
-                    event.monthlyinput = $("#monthlyinput").val();
-                    if ($("#monthlygroup1").prop('checked'))
-                        event.monthlygroup1 = $("#monthlygroup1").prop('checked');
-                    if ($("#monthlygroup2").prop('checked'))
-                        event.monthlgroup2 = $("#monthlygroup2").prop('checked');
-
-                    event.monthlycombofirst = $("#monthlycombofirst").val();
-                    event.monthlycombosecond = $("#monthlycombosecond").val();
-                    if ($("#jqb1").prop('checked'))
-                        event.jqb1 = $("#jqb1").prop('checked');
-                    if ($("#jqb2").prop('checked'))
-                        event.jqb2 = $("#jqb2").prop('checked');
-                    if ($("#jqb3").prop('checked'))
-                        event.jqb3 = $("#jqb3").prop('checked');
-                    if ($("#jqb4").prop('checked'))
-                        event.jqb4 = $("#jqb4").prop('checked');
-                    if ($("#jqb5").prop('checked'))
-                        event.jqb5 = $("#jqb5").prop('checked');
-                    if ($("#jqb6").prop('checked'))
-                        event.jqb6 = $("#jqb6").prop('checked');
-                    if ($("#jqb7").prop('checked'))
-                        event.jqb7 = $("#jqb7").prop('checked');
-                    if ($("#jqb8").prop('checked'))
-                        event.jqb8 = $("#jqb8").prop('checked');
-                    if ($("#jqb9").prop('checked'))
-                        event.jqb9 = $("#jqb9").prop('checked');
-                    if ($("#jqb10").prop('checked'))
-                        event.jqb10 = $("#jqb10").prop('checked');
-                    if ($("#jqb11").prop('checked'))
-                        event.jqb11 = $("#jqb11").prop('checked');
-                    if ($("#jqb12").prop('checked'))
-                        event.jqb12 = $("#jqb12").prop('checked');
-                    if ($("#jqb13").prop('checked'))
-                        event.jqb13 = $("#jqb13").prop('checked');
-                    if ($("#jqb14").prop('checked'))
-                        event.jqb14 = $("#jqb14").prop('checked');
-                    if ($("#jqb15").prop('checked'))
-                        event.jqb15 = $("#jqb15").prop('checked');
-                    if ($("#jqb16").prop('checked'))
-                        event.jqb16 = $("#jqb16").prop('checked');
-                    if ($("#jqb17").prop('checked'))
-                        event.jqb17 = $("#jqb17").prop('checked');
-                    if ($("#jqb18").prop('checked'))
-                        event.jqb18 = $("#jqb18").prop('checked');
-                    if ($("#jqb19").prop('checked'))
-                        event.jqb19 = $("#jqb19").prop('checked');
-                    if ($("#jqb20").prop('checked'))
-                        event.jqb20 = $("#jqb20").prop('checked');
-                    if ($("#jqb21").prop('checked'))
-                        event.jqb21 = $("#jqb21").prop('checked');
-                    if ($("#jqb22").prop('checked'))
-                        event.jqb22 = $("#jqb22").prop('checked');
-                    if ($("#jqb23").prop('checked'))
-                        event.jqb23 = $("#jqb23").prop('checked');
-                    if ($("#jqb24").prop('checked'))
-                        event.jqb24 = $("#jqb24").prop('checked');
-                    if ($("#jqb25").prop('checked'))
-                        event.jqb25 = $("#jqb25").prop('checked');
-                    if ($("#jqb26").prop('checked'))
-                        event.jqb26 = $("#jqb26").prop('checked');
-                    if ($("#jqb27").prop('checked'))
-                        event.jqb27 = $("#jqb27").prop('checked');
-                    if ($("#jqb28").prop('checked'))
-                        event.jqb28 = $("#jqb28").prop('checked');
-                    if ($("#jqb29").prop('checked'))
-                        event.jqb29 = $("#jqb29").prop('checked');
-                    if ($("#jqb30").prop('checked'))
-                        event.jqb30 = $("#jqb30").prop('checked');
-                    if ($("#jqb31").prop('checked'))
-                        event.jqb31 = $("#jqb31").prop('checked');
-                    event.yearlyinput = $("#yearlyinput").val();
-                    if ($("#yearlygroup1").prop('checked'))
-                        event.yearlygroup1 = $("#yearlygroup1").prop('checked');
-                    if ($("#yearlygroup2").prop('checked'))
-                        event.yearlygroup2 = $("#yearlygroup2").prop('checked');
-                    event.yearlycombofirst = $("#yearlycombofirst").val();
-                    event.yearlycombosecond = $("#yearlycombosecond").val();
-                    if ($("#jqbjan").prop('checked'))
-                        event.jqbjan = $("#jqbjan").prop('checked');
-                    if ($("#jqbfeb").prop('checked'))
-                        event.jqbfeb = $("#jqbfeb").prop('checked');
-                    if ($("#jqbmar").prop('checked'))
-                        event.jqbmar = $("#jqbmar").prop('checked');
-                    if ($("#jqbapr").prop('checked'))
-                        event.jqbapr = $("#jqbapr").prop('checked');
-                    if ($("#jqbmay").prop('checked'))
-                        event.jqbmay = $("#jqbmay").prop('checked');
-                    if ($("#jqbjun").prop('checked'))
-                        event.jqbjun = $("#jqbjun").prop('checked');
-                    if ($("#jqbjul").prop('checked'))
-                        event.jqbjul = $("#jqbjul").prop('checked');
-                    if ($("#jqbaug").prop('checked'))
-                        event.jqbaug = $("#jqbaug").prop('checked');
-                    if ($("#jqbsep").prop('checked'))
-                        event.jqbsep = $("#jqbsep").prop('checked');
-                    if ($("#jqboct").prop('checked'))
-                        event.jqboct = $("#jqboct").prop('checked');
-                    if ($("#jqbnov").prop('checked'))
-                        event.jqbnov = $("#jqbnov").prop('checked');
-                    if ($("#jqbdec").prop('checked'))
-                        event.jqbdec = $("#jqbdec").prop('checked');
-
-                }
 
                 $("#allelement").multiselect({
                     multiple: false,
@@ -1204,8 +1597,15 @@ $(document).ready(function() {
                         tmp = tmp.split(":");
                         var parentID = tmp[0];
 
-                        servConn._socket.emit('getObject', ID, function (err, res) {
+                        var res = objects[ID];
+                        if (res != undefined) {
                             var type;
+                            var role;
+
+                            if (res && res.common) {
+                                role = res.common.role;
+                            }
+
                             if (res && res.native) {
                                 type = res.native["PARENT_TYPE"];
                                 console.log("ID == " + res['_id']);
@@ -1214,20 +1614,24 @@ $(document).ready(function() {
                                 }
                             }
 
-                            if (type == "HM-CC-TC" || type == "HM-CC-RT-DN" || type == "BC-RT-TRX-CyG-3") {
-                                $("#button_submit").show();
-                                $("#divTemperature").show();
-                                $("#divSpinner").show();
-                            } else {
-                                $("#button_submit").hide();
-                                $("#divTemperature").hide();
-                                $("#divSpinner").hide();
-                            }
+                            var thermostatArray = objects["system.adapter.occ.0"];
+                            if (thermostatArray != undefined) {
+                                if (thermostatArray.native != undefined && thermostatArray.native.thermostat != undefined && thermostatArray.native.thermostat[event.IDTYPE] != undefined) {
+                                    $("#button_submit").show();
+                                    $("#divTemperature").show();
+                                    $("#divSpinner").show();
 
-                            if (type == "HM-LC-Sw2-FM" || type == "HM-LC-Sw4-DR") {
-                                $("#divSwitch").show();
-                            } else {
-                                $("#divSwitch").hide();
+                                    $('#checkbox_allday').attr('disabled', true);
+                                    $('#repeaterCombo').val("none");
+                                    $('#repeaterCombo').attr('disabled', true);
+                                    $('#endCombo').attr('disabled', true);
+                                    $('#numberoftimes').attr('disabled', true);
+                                } else {
+                                    $("#button_submit").hide();
+                                    $("#divTemperature").hide();
+                                    $("#divSpinner").hide();
+                                    $("#div_Script").hide();
+                                }
                             }
 
                             if (type == "VARDP") {
@@ -1263,24 +1667,109 @@ $(document).ready(function() {
                                 $("#divState_4").hide();
                                 $("#divState_20").hide();
                                 alert("ALARMDP Values cannot be set");
+                            } else if (role == "switch") {
+                                $("#divSwitch").show();
+                            } else {
+                                $("#divSwitch").hide();
+                                $("#divState_Generic").show();
                             }
 
-                            $("#IDTYPE").val(type);
+                            //alert(tmp[0]+"."+tmp[1]);
                             $("#IDID").val(tmp[0]+"."+tmp[1]);
-                            $("#IDPARENT").val(parentID);
-                        });
-
-                        $('#input_location').val(ui.value);
+                        }
+                        $('#input_location').val(ui.text);
                     }
                 });
 
                 /*******************************************************************/
                 // Calendar Functions
                 $('#calendar').fullCalendar({
+                    customButtons: {
+                        customButton1: {
+                            text: 'Refresh',
+                            click: function () {
+                                getData( function() {
+                                    // Todo: set all marked allelements ID back
+                                    // cause after reload, all are away
+                                    var allElements = $('#allelements').val();
+
+                                    allEvents = new Array();
+                                    $('#allelements').multiselect("uncheckAll");
+
+                                    readEventsFromObjects();
+                                    var valArr = allElements;
+                                    i = 0, size = valArr.length, $options = $('#allelements option');
+
+                                    for(i; i < size; i++){
+                                        $options.filter('[value="'+valArr[i]+'"]').prop('selected', true);
+
+                                        $("#allelements").multiselect("widget").find(":checkbox[value='"+valArr[i]+"']").each(function() {
+                                            this.click();
+                                        });
+                                    }
+                                    $("#allelements").multiselect("refresh");
+                                });
+                            }
+                        },
+                        customButton2: {
+                            text: 'Select Options',
+                            click: function() {
+                                $('#selectSingle').hide();
+                                $('#selectMultiple').show();
+
+                                dialogioptions = $( "#dialog-form" ).dialog({
+                                    autoOpen: false,
+                                    height: 335,
+                                    width: 400,
+                                    modal: true,
+                                    buttons: {
+                                        Reload: function() {
+                                            getData( function() {
+                                                // Todo: set all marked allelements ID back
+                                                // cause after reload, all are away
+                                                var allElements = $('#allelements').val();
+
+                                                allEvents = new Array();
+                                                $('#allelements').multiselect("uncheckAll");
+
+                                                readEventsFromObjects();
+
+                                                var valArr = allElements;
+                                                i = 0, size = valArr.length, $options = $('#allelements option');
+
+                                                for(i; i < size; i++){
+                                                    $options.filter('[value="'+valArr[i]+'"]').prop('selected', true);
+
+                                                    $("#allelements").multiselect("widget").find(":checkbox[value='"+valArr[i]+"']").each(function() {
+                                                        this.click();
+                                                    });
+                                                }
+                                                $("#allelements").multiselect("refresh");
+                                            });
+                                        },
+                                        Close: function() {
+                                            dialogioptions.dialog( "close" );
+                                        }
+                                    },
+                                    Close: function() {
+                                    }
+                                });
+
+                                dialogioptions.dialog( "open" );
+                            }
+                        },
+                        customButton3: {
+                            text: 'Upload',
+                            color: 'red',
+                            click: function () {
+                                alert("Upload");
+                            }
+                        },
+                    },
                     header: {
-                        left: 'prev,next today',
+                        left: 'prev,next today customButton1,customButton2,customButton3',
                         center: 'title',
-                        right: 'month,agendaWeek,agendaDay'
+                        right: 'month,agendaWeek,agendaDay' // TODO: Generate customView
                     },
                     defaultView: 'agendaWeek',
                     editable: true,
@@ -1309,21 +1798,21 @@ $(document).ready(function() {
                         $("#divState_20").hide();
 
                         // Todo: Not yet supported
-                        // $('#repeaterCombo').val("none");
-                        // $('#checkbox_allday').attr('disabled', false);
-                        $('#checkbox_allday').attr('disabled', true);
                         $('#repeaterCombo').val("none");
-                        $('#repeaterCombo').attr('disabled', true);
-                        $('#endCombo').attr('disabled', true);
+                        $('#checkbox_allday').attr('disabled', false);
+                        $('#repeaterCombo').attr('disabled', false);
+
+                        $('#jqdEnd').attr('disabled', true);
+                        $('#jqdEnd').hide();
                         $('#numberoftimes').attr('disabled', true);
+                        $('#endCombo').attr('disabled', true);
+                        $('#endCombo').val('never');
+
+                        $('#endCombo').show();
+                        $('#span_end').show();
+                        $('#numberoftimes').hide();
 
                         $("#button_submit").hide();
-
-                        $('#endCombo').val("never");
-                        $('#endCombo').attr('disabled', true);
-                        $('#numberoftimes').val("0");
-                        $('#numberoftimes').attr('disabled', true);
-                        $('#numberoftimes').hide();
 
                         var m_begin = $.fullCalendar.moment(start);
                         var m_end = $.fullCalendar.moment(end);
@@ -1382,13 +1871,29 @@ $(document).ready(function() {
                             return;
                         }
 
+                        console.log(event);
                         // opens events in a popup window
-                        $('#input_location').val(event.section);
+                        var obj = objects[event.IDID];
+                        if (obj.common.name !== undefined) {
+                            $('#input_location').val(obj.common.name);
+                        } else {
+                            $('#input_location').val(obj._id);
+                        }
                         $('#input_title').val(event.title);
                         $('#input_notes').val(event.notes);
 
+                        $('#endCombo').val(event.endCombo);
+
+                        if (event.endCombo == "never") {
+                            $('#endCombo').attr('disabled', true);
+                        } else {
+                            $('#endCombo').attr('disabled', false);
+                        }
+                        $('#repeaterCombo').val(event.repeaterCombo);
+
+                        showHideEndCombo($('#endCombo').val());
+
                         if (event.decalc) {
-                            alert("true");
                             $('#setDECALCIFICATION').prop("checked", true);
                             $("#temperature_spinner").val("");
                             $("#jqdTo").hide();
@@ -1406,20 +1911,46 @@ $(document).ready(function() {
                         $('#eventID').val(event.id);
 
                         $("#IDID").val(event.IDID);
-                        $("#IDPARENT").val(event.IDPARENT);
-                        $("#IDTYPE").val(event.IDTYPE);
 
-                        if (event.IDTYPE == "HM-CC-TC" || event.IDTYPE == "HM-CC-RT-DN" || event.IDTYPE == "BC-RT-TRX-CyG-3") {
-                            $("#button_submit").show();
-                            $("#divTemperature").show();
-                            $("#divSpinner").show();
-                        } else {
-                            $("#button_submit").hide();
-                            $("#divTemperature").hide();
-                            $("#divSpinner").hide();
+                        var thermostatArray = objects["system.adapter.occ.0"];
+
+                        var localObject = objects[event.IDID];
+                        var TYPE = localObject.native.TYPE;
+                        $("#IDTYPE").val(TYPE);
+
+                        // TODO: Check if Parent is a supported Thermostat
+                        var elems = event.IDID.split(".");
+                        var instance = elems[0] + "." + elems[1] + "." + elems[2];
+                        var obj = objects[instance];
+                        var oTYPE = obj.native.TYPE;
+
+                        if (thermostatArray != undefined) {
+                            if (thermostatArray.native != undefined && thermostatArray.native.thermostat != undefined && thermostatArray.native.thermostat[oTYPE] != undefined) {
+                                $("#IDTYPE").val(oTYPE);
+                                $("#button_submit").show();
+                                $("#divTemperature").show();
+                                $("#divSpinner").show();
+                                $('#checkbox_allday').attr('disabled', true);
+                                $('#repeaterCombo').attr('disabled', true);
+
+
+                                $('#repeaterCombo').val("none");
+                                $('#endCombo').attr('disabled', true);
+                                $('#numberoftimes').attr('disabled', true);
+                            } else {
+                                $('#checkbox_allday').attr('disabled', false);
+                                $('#repeaterCombo').attr('disabled', false);
+
+                                $("#button_submit").hide();
+                                $("#divTemperature").hide();
+                                $("#divSpinner").hide();
+                            }
+
+                            $('#divState_Generic').hide();
                         }
 
-                        if (event.IDTYPE == "HM-LC-Sw2-FM" || event.IDTYPE == "HM-LC-Sw4-DR") {
+                        var res = objects[event.IDID];
+                        if (res != undefined && res.common && res.common.role && (res.common.role == "switch" || res.common.role == "state")) {
                             $("#divSwitch").show();
                         } else {
                             $("#divSwitch").hide();
@@ -1430,7 +1961,6 @@ $(document).ready(function() {
                                 $("#divState").hide();
                             }
                         }
-
 
 // Todo: Show VARDP from Google correct
                         if (event.IDTYPE == "VARDP") {
@@ -1497,37 +2027,10 @@ $(document).ready(function() {
                             alert("ALARMDP Values cannot be set");
                         }
 
-
-
                         // Set Values from event
                         //$('#checkbox_allday').attr('disabled', event.allDay);
                         $('#Checkbox2').attr('disabled', false);
                         hideFromTo(false);
-
-                        if (event.endCombo == undefined) {
-                            $('#endCombo').val("never");
-                            $('#endCombo').attr('disabled', true);
-                        } else {
-                            $('#endCombo').val(event.endCombo);
-                            $('#endCombo').attr('disabled', false);
-                        }
-                        if (event.numberoftimes == undefined) {
-                            $('#numberoftimes').attr('disabled', true);
-                            $('#numberoftimes').hide();
-                            $('#numberoftimes').val("0");
-                        } else {
-                            $('#numberoftimes').attr('disabled', false);
-                            $('#numberoftimes').show();
-                            $('#numberoftimes').val(event.numberoftimes);
-                        }
-
-                        // Todo: Not yet supported
-                        // $('#repeaterCombo').val(event.repeaterCombo);
-                        $('#repeaterCombo').val("none");
-                        $('#repeaterCombo').attr('disabled', true);
-                        $('#endCombo').attr('disabled', true);
-                        $('#numberoftimes').attr('disabled', true);
-                        $('#checkbox_allday').attr('disabled', true);
 
                         var m_begin = $.fullCalendar.moment(event.start);
                         var m_end = $.fullCalendar.moment(event.end);
@@ -1543,6 +2046,10 @@ $(document).ready(function() {
 
                         var color = event.color;
                         var picker = $('#colorPicker').data("plugin_tinycolorpicker");
+                        if (color == undefined) {
+                            console.log("ERROR: No color defined within occ, using default Color!");
+                            color = "#0391CE";
+                        }
                         picker.setColor(color);
 
                         if (all_day) {
@@ -1582,24 +2089,38 @@ $(document).ready(function() {
                     },
                     // Loading Function, not yet implemented
                     loading: function(bool) {
-                        //$('#loading').toggle(bool);
                         //alert("Loading " + bool);
                     },
                     // Event rendering Function, not yet implemented
                     eventRender: function(event, element, view) {
-                        // alert("Render " + event.title + " View " + view + " Element" + element);
+                        //alert("Render " + event.title + " View " + view + " Element" + element);
                         element.attr('title', event.tooltip);
                     },
                     // Event drop Function, is also called on move of a plan not yet implemented
                     eventDrop: function(event, delta) {
                         // alert("Drop " + event.title);
-                        // alert(delta);
-                        writeEventsToFile(event, event.section);
+                        var s = new Date(event.start);
+                        var e = new Date(event.end);
+                        //alert("IDID = " + event.IDID + "ID: " + event._id + " - Start: " + s.toLocaleDateString() + " " + s.toLocaleTimeString() + ", End: " + e.toLocaleDateString() + " " + e.toLocaleTimeString());
+
+                        var allEV = $("#calendar").fullCalendar('clientEvents');
+                        var eventID = event._id;
+
+                        var thermostatArray = objects["system.adapter.occ.0"];
+                        if (thermostatArray != undefined) {
+                            if (thermostatArray.native != undefined && thermostatArray.native.thermostat != undefined && thermostatArray.native.thermostat[event.IDTYPE] == undefined) {
+                                saveEventToObject(event, "save");
+                            }
+                        }
+
+                        $('#calendar').fullCalendar('rerenderEvents');
+                        // TODO: Remove Function
+                        //writeEventsToFile(event, event.IDID);
+
                     },
-                    // Event Resize Function, not yet implemented
                     eventResize: function(event) {
-                        // alert("Resize " + event.title);
-                        writeEventsToFile(event, event.section);
+                        //alert("Resize " + event.title);
+                        $( "#button_save" ).trigger( "click" );
                     },
                     viewRender: function(view, element) {
                         // TODO: Check if all Events are loaded and displayed
@@ -1620,18 +2141,13 @@ $(document).ready(function() {
                         // Todo: only Parse Events from actual View (month, week, day)
                         if (allEvents == "") {
                             //alert("Startup...");
-                            readEventsFromFile();
+                            // No longer needed, get Events from ioBroker Objects
+                            readEventsFromObjects();
                         }
                     }
                 });;
 
                 $('#calendar').fullCalendar('rerenderEvents');
-
-
-
-
-
-
             });
         }
     });

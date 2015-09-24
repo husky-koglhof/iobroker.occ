@@ -20,19 +20,60 @@
         "singleton":                true,
         "messagebox":               true,
         "adminTab":                {
-                "singleton":    true,
-                "name":         "OCC",
-                "link":         "http://%ip%:%web_port%/occ/index.html"
+            "singleton":    true,
+            "name":         "OCC",
+            "link":         "http://%ip%:%web_port%/occ/index.html"
         }
     },
     "native": {
-        "rpcListenIp": "0.0.0.0",
-        "rpcListenPort": 1600,
         "demo": true,
-        "ical": false
+        "ical": false,
+        "thermostat": {
+            "name": "Default",
+            "paramset": "MASTER",
+            "decalcset": "MASTER",
+            "param_chn": 0,
+            "decalc_chn": 0,
+            "decalc_time": "DECALCIFICATION_TIME",
+            "decalc_day": "DECALCIFICATION_WEEKDAY",
+            "timeoutText": [
+                "TEMPERATURE",
+                "ENDTIME"
+            ],
+            "mode": [
+                "CONTROL_MODE",
+                0
+            ],
+            "HM-CC-TC": {
+                "name": "HM-CC-TC",
+                "mode": [
+                    "MODE_TEMPERATUR_REGULATOR",
+                    1
+                ],
+                "param_chn": 2,
+                "decalc_chn": 2,
+                "decalc_time": [
+                    "DECALCIFICATION_MINUTE",
+                    "DECALCIFICATION_HOUR"
+                ],
+                "decalc_day": "DECALCIFICATION_DAY",
+                "timeoutText": [
+                    "TEMPERATUR",
+                    "TIMEOUT"
+                ]
+            },
+            "HM-CC-RT-DN": {
+                "name": "HM-CC-RT-DN"
+            },
+            "BC-RT-TRX-CyG-3": {
+                "name": "BC-RT-TRX-CyG-3",
+                "decalc_chn": 1,
+                "decalcset": "VALUES"
+            }
+        },
+        "variable": ["checkbox", "listbox", "numbers", "inputbox", "alarm"]
     },
     "objects": [
-
     ],
     "instanceObjects": [
         {
@@ -43,8 +84,18 @@
                 "type": "boolean",
                 "read":  true,
                 "write": true
-
             }
+        },
+        {
+            "_id": "html",
+            "type": "channel",
+            "common": {
+                "name":  "HTML Table",
+                "type": "string",
+                "read":  true,
+                "write": true
+            },
+            "native": {}
         }
     ]
 }

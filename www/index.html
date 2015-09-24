@@ -58,13 +58,21 @@
                 numberFormat: "n"
             });
         });
+
+        repeaterComboHandler = {
+            action : function(select)
+            {
+                showHideRepeater(select.options[select.selectedIndex].value);
+            }
+        }
+        endComboHandler = {
+            action : function(select)
+            {
+                showHideEndCombo(select.options[select.selectedIndex].value);
+            }
+        }
     </script>
 </head>
-
-<div id="dialog" title="Socket.IO Progress">
-    <div class="progress-label">Starting Connection...</div>
-    <div id="progressbar"></div>
-</div>
 
 <div id="dialog-form" title="Select Options from Enums">
     <form>
@@ -86,29 +94,28 @@
     </form>
 </div>
 
-<div id="links"><button id="select_options">Select Options</button></div>
 <div id="mitte"><div id='calendar'></div></div>
 
 <input type="text" id="IDID" value="0" style="display:none">
 <input type="text" id="IDPARENT" value="0" style="display:none">
-<input type="text" id="IDTYPE" value="0" style="display:block">
+<input type="text" id="IDTYPE" value="0" style="display:none">
 <div id="event_Dialog" title="Create a new Event" style="display: none; overflow: hidden">
     <input type="text" id="eventID" value="0" style="display:none">
-    <input type="text" id="input_title" style="position:absolute;left:16px;top:10px;width:209px;line-height:19px;z-index:72;" name="input_event" value="Set Name...">
+    <input type="text" id="input_title" style="position:absolute;left:16px;top:10px;width:209px;line-height:19px;z-index:1;tab-index:1" name="input_event" value="Set Name...">
 
-    <div id="colorPicker" style="position:absolute;top:12px;left:250px;z-index:172;">
+    <div id="colorPicker" style="position:absolute;top:12px;left:250px;z-index:200;">
         <a class="color" style="width:15px;height:15px;"><div class="colorInner" style="width:15px;height:15px;"></div></a>
         <div class="track" style="left:-120px;top:100px;"></div>
         <ul class="dropdown"><li></li></ul>
         <input type="hidden" class="colorInput"/>
     </div>
 
-    <input type="text" id="input_location" style="position:absolute;left:16px;top:45px;width:210px;line-height:19px;z-index:73;" name="input_location" readonly value="Select Object...">
-    <input type="button" id="button_location" name="button_location" value="Select" style="position:absolute;left:240px;top:37px;z-index:92;">
+    <input type="text" id="input_location" style="position:absolute;left:16px;top:45px;width:210px;line-height:19px;z-index:3;" name="input_location" readonly value="Select Object...">
+    <input type="button" id="button_location" name="button_location" value="Select" style="position:absolute;left:240px;top:42px;z-index:4;">
 
     <input type="checkbox" id="checkbox_allday" name="checkbox_allday" value="on" style="position:absolute;left:92px;top:204px;z-index:74;" onchange="hideFromTo(this.checked)">
 
-    <div style="position:absolute;left:16px;top:204px;width:46px;height:16px;z-index:75;text-align:left;">
+    <div style="position:absolute;left:16px;top:204px;width:46px;height:16px;z-index:6;text-align:left;">
         <span>all-day</span>
     </div>
     <div id="span_from" style="position:absolute;left:16px;top:230px;width:46px;height:16px;z-index:76;text-align:left;">
@@ -137,23 +144,23 @@
     <div style="position:absolute;left:16px;top:307px;width:46px;height:16px;z-index:84;text-align:left;">
         <span>repeat:</span>
     </div>
-    <select name="repeaterCombo" size="1" id="repeaterCombo" style="position:absolute;left:94px;top:305px;width:194px;z-index:85;">
-        <option selected value="none" onclick="showHideRepeater('none');">None</option>
-        <option value="day" onclick="showHideRepeater('day');">Every Day</option>
-        <option value="week" onclick="showHideRepeater('week');">Every Week</option>
-        <option value="month" onclick="showHideRepeater('month');">Every Month</option>
-        <option value="year" onclick="showHideRepeater('year');">Every Year</option>
-        <option value="custom" onclick="showHideRepeater('custom');">Custom...</option>
+    <select name="repeaterCombo" size="1" id="repeaterCombo" style="position:absolute;left:94px;top:305px;width:194px;z-index:85;" onchange="repeaterComboHandler.action(this)">
+        <option selected value="none">None</option>
+        <option value="day">Every Day</option>
+        <option value="week">Every Week</option>
+        <option value="month">Every Month</option>
+        <option value="year">Every Year</option>
+        <!-- Not yet supported <option value="custom">Custom...</option> -->
     </select>
     <!-- Repeater -->
 
-    <div style="position:absolute;left:16px;top:340px;width:46px;height:16px;z-index:86;text-align:left;">
+    <div id="span_end" style="position:absolute;left:16px;top:340px;width:46px;height:16px;z-index:86;text-align:left;">
         <span>end:</span>
     </div>
-    <select name="endCombo" size="1" id="endCombo" style="position:absolute;left:94px;top:337px;width:100px;z-index:87;">
-        <option selected value="never" onclick="showHideEndCombo('never');">Never</option>
-        <option value="times" onclick="showHideEndCombo('times');">After a number of Times</option>
-        <option value="date" onclick="showHideEndCombo('date');">On Date</option>
+    <select name="endCombo" size="1" id="endCombo" style="position:absolute;left:94px;top:337px;width:100px;z-index:87;" onchange="endComboHandler.action(this)">
+        <option selected value="never">Never</option>
+        <option value="times">After a number of Times</option>
+        <option value="date">On Date</option>
     </select>
 
     <input type="text" id="jqdEnd" disabled=true style="disabled:true;position:absolute;left:203px;top:337px;width:114px;z-index:88;" name="input_end" value="03/16/2015">
@@ -185,25 +192,25 @@
                 <span>Every</span>
             </div>
             <div id="monthButtons" style="position:absolute;left:15px;top:100px;height:28px;z-index:12;">
-                <input type="checkbox" id="jqbmonday" name="button_weekly" value="Mon"><label style="width:120px;height:100%;" for="jqbmonday">Monday</label>
+                <input type="checkbox" id="jqbmonday" name="button_weekly" value="1"><label style="width:120px;height:100%;" for="jqbmonday">Monday</label>
             </div>
             <div id="monthButtons" style="position:absolute;left:155px;top:100px;height:28px;z-index:11;">
-                <input type="checkbox" id="jqbtuesday" name="button_weekly" value="Tue"><label style="width:120px;height:100%;" for="jqbtuesday">Tuesday</label>
+                <input type="checkbox" id="jqbtuesday" name="button_weekly" value="2"><label style="width:120px;height:100%;" for="jqbtuesday">Tuesday</label>
             </div>
             <div id="monthButtons" style="position:absolute;left:15px;top:140px;height:28px;z-index:10;">
-                <input type="checkbox" id="jqbwednesday" name="button_weekly" value="Wed"><label style="width:120px;height:100%;" for="jqbwednesday">Wednesday</label>
+                <input type="checkbox" id="jqbwednesday" name="button_weekly" value="3"><label style="width:120px;height:100%;" for="jqbwednesday">Wednesday</label>
             </div>
             <div id="monthButtons" style="position:absolute;left:155px;top:140px;height:28px;z-index:6;">
-                <input type="checkbox" id="jqbthursday" name="button_weekly" value="Thu"><label style="width:120px;height:100%;" for="jqbthursday">Thursday</label>
+                <input type="checkbox" id="jqbthursday" name="button_weekly" value="4"><label style="width:120px;height:100%;" for="jqbthursday">Thursday</label>
             </div>
             <div id="monthButtons" style="position:absolute;left:15px;top:180px;height:28px;z-index:7;">
-                <input type="checkbox" id="jqbfriday" name="button_weekly" value="Fri"><label style="width:120px;height:100%;" for="jqbfriday">Friday</label>
+                <input type="checkbox" id="jqbfriday" name="button_weekly" value="5"><label style="width:120px;height:100%;" for="jqbfriday">Friday</label>
             </div>
             <div id="monthButtons" style="position:absolute;left:155px;top:180px;height:28px;z-index:8;">
-                <input type="checkbox" id="jqbsaturday" name="button_weekly" value="Sat"><label style="width:120px;height:100%;" for="jqbsaturday">Saturday</label>
+                <input type="checkbox" id="jqbsaturday" name="button_weekly" value="6"><label style="width:120px;height:100%;" for="jqbsaturday">Saturday</label>
             </div>
             <div id="monthButtons" style="position:absolute;left:15px;top:220px;height:28px;z-index:9;">
-                <input type="checkbox" id="jqbsunday" name="button_weekly" value="Sun"><label style="width:120px;height:100%;" for="jqbsunday">Sunday</label>
+                <input type="checkbox" id="jqbsunday" name="button_weekly" value="0"><label style="width:120px;height:100%;" for="jqbsunday">Sunday</label>
             </div>
         </div>
 
@@ -223,16 +230,16 @@
                 <option value="2">2nd</option>
                 <option value="3">3rd</option>
                 <option value="4">4th</option>
-                <option value="5">last</option>
+                <option value="last">last</option>
             </select>
             <select name="each_day" size="1" id="monthlycombosecond" style="position:absolute;left:180px;top:305px;width:150px;z-index:27;">
-                <option value="1">Monday</option>
-                <option value="2">Tuesday</option>
-                <option value="3">Wednesday</option>
-                <option value="4">Thursday</option>
-                <option value="5">Friday</option>
-                <option value="6">Saturday</option>
-                <option value="7">Sunday</option>
+                <option value="mon">Monday</option>
+                <option value="tue">Tuesday</option>
+                <option value="wed">Wednesday</option>
+                <option value="thu">Thursday</option>
+                <option value="fri">Friday</option>
+                <option value="sat">Saturday</option>
+                <option value="sun">Sunday</option>
             </select>
             <input type="radio" id="monthlygroup2" name="group_each" value="on" style="position:absolute;left:12px;top:308px;z-index:28;">
             <div style="position:absolute;left:110px;top:64px;width:36px;height:16px;z-index:1;text-align:left;  ">
@@ -378,12 +385,20 @@
         </nobr>
     </div>
 
-    <!-- Todo: not yet supported
-        <input type="button" id="button_script" name="button_script" value="Select" style="position:absolute; left:240px;top:157px;z-index:96;">
+    <div style="display: none" id="div_Script">
+        <input type="button" id="button_script" name="button_script" value="Script" style="position:absolute; left:240px;top:163px;z-index:96;">
         <div style="position:absolute;left:16px;top:164px;width:80px;height:16px;text-align:left;z-index:99; display: block;">
-            <span>Script:</span>
+            <nobr><span>Script:   </span><input type="text" id="script_input" style="width:165px;" name="script_input" value="Use Select Button..."></nobr>
         </div>
-    -->
+    </div>
+
+
+    <div style="position:absolute;left:16px;top:165px;width:300px;height:16px;text-align:left;z-index:98; display: block;" id="divState_Generic">
+        <nobr><span>Select Type:</span>
+            <select multiple="multiple" id="alltypes" name="alltypes" style="width:150px;z-index:5">
+            </select>
+        </nobr>
+    </div>
 
     <div style="position:absolute;left:16px;top:165px;width:300px;height:16px;text-align:left;z-index:98; display: block;" id="divSwitch">
         <nobr><span>Switch On/Off:</span><input type="checkbox" id="switcher" value="on"></nobr>
@@ -408,17 +423,18 @@
     <div style="display: none; position:absolute;left:213px;top:341px;width:46px;height:16px;z-index:102;text-align:left;">
         <span>time(s)</span>
     </div>
-    <textarea name="TextArea1" id="input_notes" style="position:absolute;left:16px;top:105px;width:309px;height:46px;z-index:104;" rows="1" cols="48">Set some descriptive Notes...</textarea>
+    <textarea name="TextArea1" id="input_notes" style="position:absolute;left:16px;top:105px;width:309px;height:46px;z-index:4;" rows="1" cols="48">Set some descriptive Notes...</textarea>
     <div style="position:absolute;left:16px;top:86px;width:248px;height:16px;z-index:105;text-align:left;">
         <span>Description</span>
     </div>
     <hr id="Line2" style="position:absolute;left:16px;top:385px;width:603px;height:1px;z-index:106;">
 
     <!-- Buttons -->
-    <input type="button" id="button_save" name="button_save" value="Save" style="position:absolute;left:17px;top:397px;z-index:107;">
-    <input type="button" id="button_submit" name="button_submit" value="Submit" style="display:none; position:absolute;left:160px;top:397px;z-index:107;">
-    <input type="button" id="button_cancel" name="button_cancel" value="Cancel" style="position:absolute;left:80px;top:397px;z-index:108;">
-    <input type="button" id="button_delete" name="button_delete" value="Delete" style="position:absolute;right:5px;top:397px;z-index:109;">
+    <input type="button" id="button_save" name="button_save" value="Save" style="position:absolute;left:17px;top:397px;z-index:106;width:60px">
+    <input type="button" id="button_submit" name="button_submit" value="Submit" style="display:none; position:absolute;left:144px;top:397px;z-index:107;width:60px">
+    <input type="button" id="button_cancel" name="button_cancel" value="Cancel" style="position:absolute;left:80px;top:397px;z-index:108;width:60px">
+    <input type="button" id="button_reset" name="button_reset" value="Reset" style="position:absolute; left:225px;top:397px;z-index:96;width:60px">
+    <input type="button" id="button_delete" name="button_delete" value="Delete" style="position:absolute;right:5px;top:397px;z-index:109;width:60px">
     <!-- Buttons -->
 </div>
 </body>
