@@ -1844,6 +1844,13 @@ $(document).ready(function() {
                                 minute = '0' + m_begin.minutes();
                             $("#fromTime").val(hours + ":" + minute);
 
+                            // Bugfix: set toampm and fromampm correct
+                            if (hours < 12) {
+                                $("#fromampm").val("AM");
+                            } else {
+                                $("#fromampm").val("PM");
+                            }
+
                             hours = m_end.hours();
                             minute = m_end.minutes();
                             if (m_end.hours() < 10)
@@ -1853,6 +1860,13 @@ $(document).ready(function() {
                             $("#toTime").val(hours + ":" + minute);
                             $("#checkbox_allday").prop('checked', false);
                             hideFromTo(false);
+
+                            // Bugfix: set toampm and fromampm correct
+                            if (hours < 12) {
+                                $("#toampm").val("AM");
+                            } else {
+                                $("#toampm").val("PM");
+                            }
                         }
 
                         $('#jqdFrom').datepicker("setDate", new Date(year_begin, month_begin, day_begin) );
@@ -2066,6 +2080,13 @@ $(document).ready(function() {
                                 minute = '0' + m_begin.minutes();
                             $("#fromTime").val(hours + ":" + minute);
 
+                            // Bugfix: set toampm and fromampm correct
+                            if (hours < 12) {
+                                $("#fromampm").val("AM");
+                            } else {
+                                $("#fromampm").val("PM");
+                            }
+
                             hours = m_end.hours();
                             minute = m_end.minutes();
                             if (m_end.hours() < 10)
@@ -2073,6 +2094,14 @@ $(document).ready(function() {
                             if (m_end.minutes() < 10)
                                 minute = '0' + m_end.minutes();
                             $("#toTime").val(hours + ":" + minute);
+
+                            // Bugfix: set toampm and fromampm correct
+                            if (hours < 12) {
+                                $("#toampm").val("AM");
+                            } else {
+                                $("#toampm").val("PM");
+                            }
+
                         }
 
                         event.color = $('#colorPicker').data("plugin_tinycolorpicker").colorHex;
@@ -2098,7 +2127,7 @@ $(document).ready(function() {
                     },
                     // Event drop Function, is also called on move of a plan not yet implemented
                     eventDrop: function(event, delta) {
-                        // alert("Drop " + event.title);
+                        alert("Drop " + event.title);
                         var s = new Date(event.start);
                         var e = new Date(event.end);
                         //alert("IDID = " + event.IDID + "ID: " + event._id + " - Start: " + s.toLocaleDateString() + " " + s.toLocaleTimeString() + ", End: " + e.toLocaleDateString() + " " + e.toLocaleTimeString());
@@ -2119,7 +2148,7 @@ $(document).ready(function() {
 
                     },
                     eventResize: function(event) {
-                        //alert("Resize " + event.title);
+                        alert("Resize " + event.title);
                         $( "#button_save" ).trigger( "click" );
                     },
                     viewRender: function(view, element) {

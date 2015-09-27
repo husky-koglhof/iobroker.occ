@@ -229,6 +229,12 @@ das Modul in ioBroker integriert ist.
 
 ## Changelog
 
+### 0.2.1
+* (husky-koglhof)
+- Bugfix:
+	- Beim auswählen eines Eintrags wurde bei AM/PM immer AM ausgewählt und nicht
+	  der korrekte Eintrag
+	  
 ### 0.2.0
 * (husky-koglhof)
 - Bugfix:
