@@ -4,8 +4,9 @@
         "version":                  "0.2.1",
         "title":                    "ObjectControlCalendar Adapter",
         "desc": {
-            "de": "Objekt Kontrolle in Webkalender mittels /Javascript/Node.js",
-            "en": "Javascript/Node.js based Object Control Calendar adapter"
+            "de": "Objekt Kontrolle in Webkalender mittels Javascript/Node.js",
+            "en": "Javascript/Node.js based Object Control Calendar adapter",
+            "ru": "Управление объектами через календарь"
         },
         "platform":                 "Javascript/Node.js",
         "mode":                     "daemon",
@@ -21,7 +22,11 @@
         "messagebox":               true,
         "adminTab":                {
             "singleton":    true,
-            "name":         "OCC",
+            "name":         {
+                "de": "OCC",
+                "en": "OCC",
+                "ru": "OCC"
+            },
             "link":         "http://%ip%:%web_port%/occ/index.html"
         }
     },
