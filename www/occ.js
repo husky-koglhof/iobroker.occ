@@ -189,6 +189,7 @@ function readEventsFromObjects() {
                             if (obj.search("occ.0") == 0) {
                                 //console.log("--"+obj);
                                 if (obj.search(ui.value) > 0) {
+                                    // TODO: Remove .update
                                     if (obj.search(".update") == -1 && obj.search(".html") == -1 && obj.search(".color") == -1) {
                                         if (objects[obj].native !== undefined) {
                                             ioEvents.push(objects[obj].native);
@@ -265,7 +266,7 @@ function readEventsFromObjects() {
     }
 }
 
-function saveEventToObject(event, flag) {
+function saveEventToObject(event, flag, save_timestamp) {
     /* Todo: Cyclic Object */
     delete event.source;
     var fileName;
@@ -274,60 +275,80 @@ function saveEventToObject(event, flag) {
     var objectName;
     var timestamp;
 
+    var stateObj;
+
+    // Only exists if event is an array
+    // TODO: Check, this can cause only for Homematic Thermostat and Submit Button
     if (event.IDID == undefined) {
-        fileName = event[0].IDID;
-        id = event[0].id;
-        title = event[0].title;
-        timestamp = event[0].start.unix();
+        if (event.length > 0) {
+
+            var e = event[0];
+            fileName = e.IDID;
+            id = e.id;
+            title = e.title;
+            timestamp = e.start.unix();
+            objectName = 'occ.0.'+fileName+".dummy";
+
+            stateObj = {
+                common: {
+                    name:  objectName,
+                    read:  true,
+                    write: true,
+                    type: 'state',
+                    role: 'meta.config',
+                    update: true,
+                    eventState: flag
+                },
+                native: event,
+                type:   'state'
+            };
+
+            //servConn._socket.emit('setState', 'occ.0.' + fileName + ".update", {val: flag, ack: true});
+            servConn._socket.emit('setObject', objectName, stateObj);
+
+            //console.log("setState for " + 'occ.0.' + fileName + ".update" + " state = " + flag);
+            console.log("setObject for " + objectName);
+        }
     } else {
         fileName = event.IDID;
         id = event.id;
         title = event.title;
-        timestamp = event.start.unix();
-    }
+        if (flag == "delete" && event.end._i != undefined) {
+            timestamp = Date.parse(event.start._i) / 1000;
+        } else {
+            timestamp = event.start.unix();
+        }
 
-    objectName = 'occ.0.'+fileName+"."+title + "_#" + timestamp + "#";
+        if (save_timestamp) {
+            objectName = 'occ.0.' + fileName + "." + title + "_#" + timestamp + "#";
+        } else {
+            objectName = 'occ.0.'+fileName+"."+title;
+        }
 
-    var stateObj;
-
-    if (flag == "submit") {
         stateObj = {
             common: {
-                name:  objectName,
-                read:  true,
+                name: objectName,
+                read: true,
                 write: true,
                 type: 'state',
                 role: 'meta.config',
-                update: true
-            },
-            native: event[0],
-            type:   'state'
-        };
-    } else {
-        stateObj = {
-            common: {
-                name:  objectName,
-                read:  true,
-                write: true,
-                type: 'state',
-                role: 'meta.config',
-                update: true
+                update: true,
+                eventState: flag
             },
             native: event,
-            type:   'state'
+            type: 'state'
         };
 
+        if (fileName == "undefined" || fileName == undefined) {
+            alert("Failure");
+        }
+
+        //servConn._socket.emit('setState', 'occ.0.' + fileName + ".update", {val: flag, ack: true});
+        servConn._socket.emit('setObject', objectName, stateObj);
+
+        //console.log("setState for " + 'occ.0.' + fileName + ".update" + " state = " + flag);
+        console.log("setObject for " + objectName);
     }
-
-    if (fileName == "undefined" || fileName == undefined) {
-        alert("Failure");
-    }
-
-    servConn._socket.emit('setState', 'occ.0.'+fileName+".update", {val: flag, ack: true});
-    servConn._socket.emit('setObject', objectName, stateObj);
-
-    console.log("setState for " + 'occ.0.'+fileName+".update");
-    console.log("setObject for " + objectName);
 }
 
 function parseEvents(jsonEvent, flag, objectID) {
@@ -447,7 +468,7 @@ function parseEvents(jsonEvent, flag, objectID) {
         if (jsonEvent != undefined) {
             // TODO: Remove Function
             //writeEventsToFile(null, objectID);
-            saveEventToObject(jsonEvent, "delete");
+            saveEventToObject(jsonEvent, "delete", true);
         }
         //console.log("DELETE: "+objectID);
     } else  {
@@ -853,6 +874,9 @@ function createEvent(ev, days, type, eventID, params) {
     var switcher = ev.switcher;
     var state = ev.state;
     var decalc = ev.decalc;
+    var endCombo = ev.endCombo;
+    var numberoftimes = ev.numberoftimes;
+    var repeaterCombo = ev.repeaterCombo;
 
     var IDID = ev.IDID;
 
@@ -966,6 +990,10 @@ function createEvent(ev, days, type, eventID, params) {
         event.state = state;
         event.decalc = decalc;
 
+        event.numberoftimes = numberoftimes;
+        event.endCombo = endCombo;
+        event.repeaterCombo = repeaterCombo;
+
         event.IDID = IDID;
 
         var editable;
@@ -981,9 +1009,7 @@ function createEvent(ev, days, type, eventID, params) {
         event.startEditable = editable;
         event.durationEditable = editable;
         // TODO: ADD PRIVATE OBJECTS TO EVENT 
-        updatePrivateFields(event);
-        // TODO: RenderEvent when all Objects loaded 
-        // $('#calendar').fullCalendar('renderEvent', event); 
+        // updatePrivateFields(event); Only when creating from HTML
         repeatingEvents.push(event);
     }
 
@@ -1517,15 +1543,30 @@ $(document).ready(function() {
 
                     var allEV = $("#calendar").fullCalendar('clientEvents');
                     var eventID = $('#eventID').val();
-                    if (eventID != "-1" && eventID != undefined) {
-                        // Edit Mode
-                        $('#calendar').fullCalendar('removeEvents', eventID);
-                        updateEvent(eventID);
-
-                        var allEV = $("#calendar").fullCalendar('clientEvents');
+                    var state = $('#eventState').val();
+                    if (state != undefined && state != "") {
+                        if (state == "resize") {
+                            // TODO: current nothing todo
+                        } else if (state == "move") {
+                            // TODO: We must delete this Object from ioBroker
+                            var event  = $("#calendar").fullCalendar('clientEvents', eventID);
+                            if (event.length == 1) {
+                                saveEventToObject(event[0], "delete", true);
+                            } else {
+                                alert("Currently not supported");
+                            }
+                        }
                     } else {
-                        eventID = "_" + Math.random().toString(36).replace(/[^a-z]+/g, '').substr(0, 10);
-                        updateEvent(eventID);
+                        if (eventID != "-1" && eventID != undefined) {
+                            // Edit Mode
+                            $('#calendar').fullCalendar('removeEvents', eventID);
+                            updateEvent(eventID);
+
+                            var allEV = $("#calendar").fullCalendar('clientEvents');
+                        } else {
+                            eventID = "_" + Math.random().toString(36).replace(/[^a-z]+/g, '').substr(0, 10);
+                            updateEvent(eventID);
+                        }
                     }
 
                     var event  = $("#calendar").fullCalendar('clientEvents', eventID);
@@ -1535,13 +1576,18 @@ $(document).ready(function() {
                         var addr = event[0].IDID.split(".");
                         addr = addr[0]+"."+addr[1]+"."+addr[2];
                         var parent = objects[addr];
-                        if (thermostatArray.native != undefined && thermostatArray.native.thermostat != undefined && thermostatArray.native.thermostat[parent.TYPE] == undefined) {
-                            saveEventToObject(event[0], "save");
+                        if (thermostatArray.native != undefined && thermostatArray.native.thermostat != undefined && (parent != undefined && parent.native.TYPE != undefined && thermostatArray.native.thermostat[parent.native.TYPE] != undefined)) {
+                            // Homematic Thermostat do not allow Objectname with Timestamp
+                            saveEventToObject(event[0], "save", false);
+                        } else {
+                            saveEventToObject(event[0], "save", true);
+
                         }
                     }
 
                     $('#calendar').fullCalendar('rerenderEvents');
                     $("#event_Dialog").dialog('close');
+                    $('#eventState').val("");
                     // TODO: Remove Function
                     //writeEventsToFile(event[0], event[0].IDID);
                 });
@@ -1748,6 +1794,31 @@ $(document).ready(function() {
                                             });
                                         },
                                         Close: function() {
+                                            // TODO: THIS MUST BE CALLED FROM CHECK allelements.click
+                                            /*
+                                             getData( function() {
+                                             // Todo: set all marked allelements ID back
+                                             // cause after reload, all are away
+                                             var allElements = $('#allelements').val();
+
+                                             allEvents = new Array();
+                                             $('#allelements').multiselect("uncheckAll");
+
+                                             readEventsFromObjects();
+
+                                             var valArr = allElements;
+                                             i = 0, size = valArr.length, $options = $('#allelements option');
+
+                                             for(i; i < size; i++){
+                                             $options.filter('[value="'+valArr[i]+'"]').prop('selected', true);
+
+                                             $("#allelements").multiselect("widget").find(":checkbox[value='"+valArr[i]+"']").each(function() {
+                                             this.click();
+                                             });
+                                             }
+                                             $("#allelements").multiselect("refresh");
+                                             });
+                                             */
                                             dialogioptions.dialog( "close" );
                                         }
                                     },
@@ -1785,6 +1856,7 @@ $(document).ready(function() {
                         $('#eventID').val( - 1);
                         $('#input_title').val("Title");
                         $('#input_location').val("Object");
+                        $('#input_notes').val("Set some descriptive Notes...");
                         $('#Checkbox2').attr('disabled', false);
                         hideFromTo(false);
 
@@ -1904,6 +1976,8 @@ $(document).ready(function() {
                             $('#endCombo').attr('disabled', false);
                         }
                         $('#repeaterCombo').val(event.repeaterCombo);
+                        $('#numberoftimes').val(event.numberoftimes);
+                        $('#switcher').prop("checked", event.switcher);
 
                         showHideEndCombo($('#endCombo').val());
 
@@ -2127,28 +2201,35 @@ $(document).ready(function() {
                     },
                     // Event drop Function, is also called on move of a plan not yet implemented
                     eventDrop: function(event, delta) {
-                        alert("Drop " + event.title);
-                        var s = new Date(event.start);
-                        var e = new Date(event.end);
-                        //alert("IDID = " + event.IDID + "ID: " + event._id + " - Start: " + s.toLocaleDateString() + " " + s.toLocaleTimeString() + ", End: " + e.toLocaleDateString() + " " + e.toLocaleTimeString());
+                        // TODO: if Element is moved, we must remove this from ioBroker Objects
+                        /*
+                         alert("Drop " + event.title);
+                         var s = new Date(event.start);
+                         var e = new Date(event.end);
+                         //alert("IDID = " + event.IDID + "ID: " + event._id + " - Start: " + s.toLocaleDateString() + " " + s.toLocaleTimeString() + ", End: " + e.toLocaleDateString() + " " + e.toLocaleTimeString());
 
-                        var allEV = $("#calendar").fullCalendar('clientEvents');
-                        var eventID = event._id;
+                         var allEV = $("#calendar").fullCalendar('clientEvents');
+                         var eventID = event._id;
 
-                        var thermostatArray = objects["system.adapter.occ.0"];
-                        if (thermostatArray != undefined) {
-                            if (thermostatArray.native != undefined && thermostatArray.native.thermostat != undefined && thermostatArray.native.thermostat[event.IDTYPE] == undefined) {
-                                saveEventToObject(event, "save");
-                            }
-                        }
+                         var thermostatArray = objects["system.adapter.occ.0"];
+                         if (thermostatArray != undefined) {
+                         if (thermostatArray.native != undefined && thermostatArray.native.thermostat != undefined && thermostatArray.native.thermostat[event.IDTYPE] == undefined) {
+                         saveEventToObject(event, "save");
+                         }
+                         }
 
-                        $('#calendar').fullCalendar('rerenderEvents');
-                        // TODO: Remove Function
-                        //writeEventsToFile(event, event.IDID);
-
+                         $('#calendar').fullCalendar('rerenderEvents');
+                         // TODO: Remove Function
+                         //writeEventsToFile(event, event.IDID);
+                         */
+                        $('#eventID').val(event.id);
+                        $('#eventState').val("move");
+                        $( "#button_save" ).trigger( "click" );
                     },
                     eventResize: function(event) {
-                        alert("Resize " + event.title);
+                        //alert("Resize " + event.title);
+                        $('#eventID').val(event.id);
+                        $('#eventState').val("resize");
                         $( "#button_save" ).trigger( "click" );
                     },
                     viewRender: function(view, element) {
@@ -2172,6 +2253,31 @@ $(document).ready(function() {
                             //alert("Startup...");
                             // No longer needed, get Events from ioBroker Objects
                             readEventsFromObjects();
+
+
+                            getData( function() {
+                                // Todo: set all marked allelements ID back
+                                // cause after reload, all are away
+                                var allElements = $('#allelements').val();
+
+                                allEvents = new Array();
+                                $('#allelements').multiselect("uncheckAll");
+
+                                readEventsFromObjects();
+
+                                var valArr = allElements;
+                                i = 0, size = valArr.length, $options = $('#allelements option');
+
+                                for(i; i < size; i++){
+                                    $options.filter('[value="'+valArr[i]+'"]').prop('selected', true);
+
+                                    $("#allelements").multiselect("widget").find(":checkbox[value='"+valArr[i]+"']").each(function() {
+                                        this.click();
+                                    });
+                                }
+                                $("#allelements").multiselect("refresh");
+                            });
+
                         }
                     }
                 });;

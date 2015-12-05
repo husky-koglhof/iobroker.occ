@@ -36,14 +36,14 @@ function getData(callback) {
     var statesReady;
     var objectsReady;
 
-    adapter.log.info('requesting all states');
-    adapter.getForeignStates('*', function (err, res) {
+    adapter.log.debug('requesting all states');
+    adapter.getForeignStates('occ.*', function (err, res) {
         states = res;
         statesReady = true;
-        adapter.log.info('received all states');
+        adapter.log.debug('received all states');
         if (objectsReady && typeof callback === 'function') callback();
     });
-    adapter.log.info('requesting all objects');
+    adapter.log.debug('requesting all objects');
 
     adapter.objects.getObjectList({include_docs: true}, function (err, res) {
         res = res.rows;
@@ -55,7 +55,7 @@ function getData(callback) {
         }
 
         objectsReady = true;
-        adapter.log.info('received all objects');
+        adapter.log.debug('received all objects');
         if (statesReady && typeof callback === 'function') callback();
     });
 
@@ -78,14 +78,6 @@ var adapter = utils.adapter({
                 adapter.log.debug("init iCal Objects...");
                 addiCalObjects();
             }
-            /*
-             // TODO: NOT WORKING
-             readEventsFromFile("scheduledJobs", function (data) {
-             scheduledJobs = JSON.parse(data);
-             adapter.log.error("Defined Jobs found: " + JSON.stringify(scheduledJobs));
-             });
-
-             */
         });
 
     },
@@ -161,23 +153,31 @@ var adapter = utils.adapter({
             var objName = elems[0]+"."+elems[1]+"."+elems[2];
             var obj = objects[objName];
             var TYPE = obj.native.TYPE;
-            if (id.search(".update") == 0) {
-                return;
-            }
+            // TODO: remove
+            /*
+             if (id.search(".update") == 0) {
+             return;
+             }
+             */
 
             if (address.search("_#") > 1) {
                 address = address.split("_#")[0];
             }
-            var addr = address.replace(object.native.title,"");
 
-            var state = states["occ.0." + addr + "update"];
-            if (state == undefined) {
-                return;
+            if (id.search(".dummy") < 0) {
+                var addr = address.replace(object.native.title,"");
+
+                // var state = states["occ.0." + addr + "update"];
+                var state = object.common.eventState;
+                if (state == undefined) {
+                    return;
+                }
             }
+
             var decalc_address;
             var param_address;
-            var paramset;
-            var decalcset;
+            var paramset = {};
+            var decalcset = {};
             var decalcType;
             var first = true;
             var start;
@@ -190,187 +190,191 @@ var adapter = utils.adapter({
             var allJobs;
             var date;
 
-            if (state.val == "submit") {
-                getData(function() {
-                    for (var object in objects) {
-                        var o = objects[object];
-                        if (o.native !== undefined && o.native.id !== undefined && addr.search(o.native.IDID) == 0) {
-                            adapter.log.debug("getData: addr " + addr + " = " + o.native.id)
+            if (id.search(".dummy") > 0) {
+                var objx = object.native;
 
-                            var thermostat;
-                            IDID = o.native.IDID;
+                for (var object in objx) {
+                    var o = objx[object];
 
-                            var elems = IDID.split(".");
-                            var instance = elems[0] + "." + elems[1] + "." + elems[2];
-                            var obj = objects[instance];
-                            var TYPE = obj.native.TYPE;
+                    var thermostat;
+                    IDID = o.IDID;
 
-                            thermostat = thermostatArray[TYPE];
-                            if (thermostat == undefined) {
+                    var elems = IDID.split(".");
+                    var instance = elems[0] + "." + elems[1] + "." + elems[2];
+                    var obj = objects[instance];
+                    var TYPE = obj.native.TYPE;
+
+                    thermostat = thermostatArray[TYPE];
+                    if (thermostat == undefined) {
+                        return new Error("'type' must defined within io-package.json as type thermostat");
+                    }
+
+                    /*
+                     if (first == true) {
+                     if (thermostat.mode !== undefined) {
+                     var tname = thermostat.mode[0];
+                     var tvalue = thermostat.mode[1];
+                     decalcset = {};
+                     paramset = {};
+                     paramset[tname] = tvalue;
+                     } else {
+                     var tname = thermostatArray.mode[0];
+                     var tvalue = thermostatArray.mode[1];
+                     decalcset = {};
+                     paramset = {};
+                     decalcset[tname] = tvalue;
+                     }
+                     first = false;
+                     }
+                     */
+                    if (thermostat != undefined) {
+                        var temperature = o.temperature; // 17
+                        var title = o.title;
+                        var number = title.split("_")[2];
+                        number = number - 1;
+                        if (number == 0) {
+                            // Todo: it's the last entry from day before
+                            // TEMPERATUR_MONDAY_0 = TEMPERATUR_SUNDAY_???
+                        }
+
+                        start = o.start;
+                        end = o.end;
+                        var x = new Date(end);
+                        var hours = x.getHours();
+                        var min = x.getMinutes();
+
+                        var timeout = (hours * 60) + min;
+                        if (timeout == 0) {
+                            // Last Entry
+                            timeout = 1440;
+                        }
+
+                        var timeoutText = "";
+                        var tt;
+                        if (thermostat != undefined) {
+                            tt = thermostat.timeoutText;
+                            if (tt instanceof Array && tt.length == 2) {
+                                timeoutText = title.replace(tt[0], tt[1]);
+                            } else {
+                                tt = thermostatArray.timeoutText;
+                                timeoutText = title.replace(tt[0], tt[1]);
+                            }
+                        } else {
+                            return new Error("'type' must defined within io-package.json as type thermostat");
+                        }
+
+                        // Use correct address for push
+                        var decalc_chn = thermostat.decalc_chn;
+                        if (decalc_chn == undefined) {
+                            decalc_chn = thermostatArray['decalc_chn']
+                        }
+                        //decalc_address = IDID + ":" + decalc_chn;
+                        decalc_address = obj._id + ":" + decalc_chn;
+
+                        // Bugfix, Set Decalc
+                        // TODO: Check if DECALC needs extra channel (thermostat.decalc_chn)
+                        if (title == "DECALCIFICATION") {
+                            var decalcDay = new Date(start).getDay();
+
+                            /* Javascript Date
+                             0 = Sunday
+                             1 = Monday
+                             2 = Tuesday
+                             3 = Wednesday
+                             4 = Thursday
+                             5 = Friday
+                             6 = Saturday
+                             */
+
+                            /* Homematic Date
+                             0 = Saturday
+                             1 = Sunday
+                             2 = Monday
+                             3 = Tuesday
+                             4 = Wednesday
+                             5 = Thursday
+                             6 = Friday
+                             */
+
+                            if (decalcDay == 6) {
+                                decalcDay = 0;
+                            } else {
+                                decalcDay += 1;
+                            }
+
+                            var decalc_day;
+                            var decalc_time;
+                            var dmin;
+                            var dhour;
+                            if (thermostat != undefined) {
+                                decalcType = thermostat.decalcset;
+                                if (decalcType == undefined) {
+                                    decalcType = thermostatArray.decalcset;
+                                }
+                                decalc_day = thermostat.decalc_day;
+                                if (decalc_day == undefined) {
+                                    decalc_day = thermostatArray.decalc_day;
+                                }
+                                decalc_time = thermostat.decalc_time;
+                                if (decalc_time == undefined) {
+                                    decalc_time = thermostatArray.decalc_time;
+                                }
+                                if (decalc_time instanceof Array && decalc_time.length == 2) {
+                                    decalcset[decalc_time[0]] = new Date(start).getMinutes();
+                                    decalcset[decalc_time[1]] = new Date(start).getHours();
+                                } else {
+                                    decalcset[decalc_time] = (new Date(start).getHours() * 60) + new Date(start).getMinutes();
+                                }
+                                decalcset[decalc_day] = decalcDay; //  0 => Saturday, ..., 6 => Friday
+                            } else {
                                 return new Error("'type' must defined within io-package.json as type thermostat");
                             }
-
-                            if (first == true) {
-                                if (thermostat.mode !== undefined) {
-                                    var tname = thermostat.mode[0];
-                                    var tvalue = thermostat.mode[1];
-                                    decalcset = {};
-                                    paramset = {};
-                                    paramset[tname] = tvalue;
-                                } else {
-                                    var tname = thermostatArray.mode[0];
-                                    var tvalue = thermostatArray.mode[1];
-                                    decalcset = {};
-                                    paramset = {};
-                                    decalcset[tname] = tvalue;
-                                }
-                                first = false;
-                            }
-
-                            if (thermostat != undefined) {
-                                var temperature = o.native.temperature; // 17
-
-                                var title = o.native['title'].split(" "); // TEMPERATUR_MONDAY_0 - JEQ0550466:2
-                                var temperatureText = title[0];
-
-                                var number = temperatureText.split("_")[2];
-                                number = number - 1;
-                                if (number == 0) {
-                                    // Todo: it's the last entry from day before
-                                    // TEMPERATUR_MONDAY_0 = TEMPERATUR_SUNDAY_???
-                                }
-
-                                start = o.native['start'];
-                                end = o.native['end'];
-                                var x = new Date(end);
-                                var hours = x.getHours();
-                                var min = x.getMinutes();
-
-                                var timeout = (hours * 60) + min;
-                                if (timeout == 0) {
-                                    // Last Entry
-                                    timeout = 1440;
-                                }
-
-                                var timeoutText = "";
-                                var tt;
-                                if (thermostat != undefined) {
-                                    tt = thermostat.timeoutText;
-                                    if (tt instanceof Array && tt.length == 2) {
-                                        timeoutText = temperatureText.replace(tt[0], tt[1]);
-                                    } else {
-                                        tt = thermostatArray.timeoutText;
-                                        timeoutText = temperatureText.replace(tt[0], tt[1]);
-                                    }
-                                } else {
-                                    return new Error("'type' must defined within io-package.json as type thermostat");
-                                }
-
-                                // Use correct address for push
-                                var decalc_chn = thermostat.decalc_chn;
-                                if (decalc_chn == undefined) {
-                                    decalc_chn = thermostatArray['decalc_chn']
-                                }
-                                //decalc_address = IDID + ":" + decalc_chn;
-                                decalc_address = obj._id + ":" + decalc_chn;
-
-                                // Bugfix, Set Decalc
-                                // TODO: Check if DECALC needs extra channel (thermostat.decalc_chn)
-                                if (temperatureText == "DECALCIFICATION") {
-                                    var decalcDay = new Date(start).getDay();
-
-                                    /* Javascript Date
-                                     0 = Sunday
-                                     1 = Monday
-                                     2 = Tuesday
-                                     3 = Wednesday
-                                     4 = Thursday
-                                     5 = Friday
-                                     6 = Saturday
-                                     */
-
-                                    /* Homematic Date
-                                     0 = Saturday
-                                     1 = Sunday
-                                     2 = Monday
-                                     3 = Tuesday
-                                     4 = Wednesday
-                                     5 = Thursday
-                                     6 = Friday
-                                     */
-
-                                    if (decalcDay == 6) {
-                                        decalcDay = 0;
-                                    } else {
-                                        decalcDay += 1;
-                                    }
-
-                                    var decalc_day;
-                                    var decalc_time;
-                                    var dmin;
-                                    var dhour;
-                                    if (thermostat != undefined) {
-                                        decalcType = thermostat.decalcset;
-                                        if (decalcType == undefined) {
-                                            decalcType = thermostatArray.decalcset;
-                                        }
-                                        decalc_day = thermostat.decalc_day;
-                                        if (decalc_day == undefined) {
-                                            decalc_day = thermostatArray.decalc_day;
-                                        }
-                                        decalc_time = thermostat.decalc_time;
-                                        if (decalc_time == undefined) {
-                                            decalc_time = thermostatArray.decalc_time;
-                                        }
-                                        if (decalc_time instanceof Array && decalc_time.length == 2) {
-                                            decalcset[decalc_time[0]] = new Date(start).getMinutes();
-                                            decalcset[decalc_time[1]] = new Date(start).getHours();
-                                        } else {
-                                            decalcset[decalc_time] = (new Date(start).getHours() * 60) + new Date(start).getMinutes();
-                                        }
-                                        decalcset[decalc_day] = decalcDay; //  0 => Saturday, ..., 6 => Friday
-                                    } else {
-                                        return new Error("'type' must defined within io-package.json as type thermostat");
-                                    }
-                                } else {
-                                    paramset[timeoutText] = timeout;
-                                    paramset[temperatureText] = {explicitDouble: temperature};
-                                }
-                            }
+                        } else {
+                            paramset[timeoutText] = timeout;
+                            paramset[title] = {explicitDouble: temperature};
                         }
                     }
-                    if (thermostat == undefined) {
-                        return;
-                    }
-                    var paramType;
-                    if (thermostat.paramset == undefined) {
-                        paramType = thermostatArray.paramset;
-                    } else {
-                        paramType = thermostat.paramset;
-                    }
-
-                    var param_chn;
-                    if (thermostat.param_chn == undefined) {
-                        param_chn = thermostatArray.param_chn;
-                    } else {
-                        param_chn = thermostat.param_chn;
-                    }
-                    //param_address = IDID+":"+param_chn;
-                    param_address = obj._id+":"+param_chn;
-                    if (param_address == decalc_address) {
-                        for (var value in decalcset) {
-                            paramset[value] = decalcset[value];
-                        }
-                        putParamsets(param_address, paramset, decalcType);
-                    } else {
-                        putParamsets(param_address, paramset, paramType);
-                        putParamsets(decalc_address, decalcset, decalcType);
-                    }
-                    var updateName = adapter.namespace + "." + IDID + ".update";
-                    adapter.setState(updateName, {val: "latest", ack: true});
-                    adapter.log.warn("getData done");
+                }
+                if (thermostat == undefined) {
                     return;
+                }
+                var paramType;
+                if (thermostat.paramset == undefined) {
+                    paramType = thermostatArray.paramset;
+                } else {
+                    paramType = thermostat.paramset;
+                }
+
+                var param_chn;
+                if (thermostat.param_chn == undefined) {
+                    param_chn = thermostatArray.param_chn;
+                } else {
+                    param_chn = thermostat.param_chn;
+                }
+                param_address = obj._id+":"+param_chn;
+                if (param_address == decalc_address) {
+                    for (var value in decalcset) {
+                        paramset[value] = decalcset[value];
+                    }
+                    putParamsets(param_address, paramset, decalcType);
+                } else {
+                    putParamsets(param_address, paramset, paramType);
+                    putParamsets(decalc_address, decalcset, decalcType);
+                }
+                // TODO: remove
+                // var updateName = adapter.namespace + "." + IDID + ".update";
+                // adapter.setState(updateName, {val: "latest", ack: true});
+
+                var dummyName = adapter.namespace + "." + IDID + ".dummy";
+                adapter.delObject(dummyName, function (res, err) {
+                    if (res != undefined && res != "Not exists") adapter.log.error("res from delObject: " + res);
+                    if (err != undefined) adapter.log.error("err from delObject: " + err);
                 });
+                adapter.deleteState(dummyName, function (res, err) {
+                    if (res != undefined && res != "Not exists") adapter.log.error("res from deleteState: " + res);
+                    if (err != undefined) adapter.log.error("err from deleteState: " + err);
+                });
+                return;
             } else if (state.val == "save") {
                 TYPE = obj.native.TYPE;
                 IDID = object.native.IDID;
@@ -378,134 +382,13 @@ var adapter = utils.adapter({
                 var obj = objects[IDID];
                 // hm-rpc definition, role = switch, openzwave definition, role = state
                 if (obj.common != undefined && obj.common.role != undefined && (obj.common.role == "switch" || obj.common.role == "state")) {
-                    start = object.native.start;
-                    end = object.native.end;
+                    createJob(object);
 
-                    begin = new Date(start);
-                    end = new Date(end);
-
-                    var allDay = object.native.allDay;
-                    if (allDay == true) {
-                        adapter.log.info("allDay Value for " + IDID);
-                    }
-
-                    objectName = IDID;
-                    state = object.native.switcher;
-
-                    scheduleName = objectName+"###"+begin.getTime()+"###"+state;
-
-                    job = new Object();
-                    job.objectName = objectName;
-                    job.scheduleName = scheduleName;
-                    job.TYPE = TYPE;
-
-                    job.state = state;
-                    job.time = begin;
-
-                    createScheduledJob(job);
-
-                    // Create job for true and false
-                    scheduleName = objectName+"###"+end.getTime()+"###"+!state;
-
-                    job = new Object();
-                    job.objectName = objectName;
-                    job.scheduleName = scheduleName;
-
-                    job.TYPE = TYPE;
-                    job.state = !state;
-                    job.time = end;
-                    createScheduledJob(job);
-
-                    // Feature: add Support for recurring Events
-                    var numberoftimes = object.native.numberoftimes; // 2
-                    var repeaterCombo = object.native.repeaterCombo; // day
-                    var jqdEnd = object.native.jqdEnd; // "07/02/2015"
-                    var jende = new Date(jqdEnd);
-                    if (jqdEnd != undefined && jqdEnd != "" && numberoftimes == 0) {
-                        var m = end.getMinutes();
-                        var h = end.getHours();
-                        jende.setMinutes(m);
-                        jende.setHours(h);
-
-                        if (repeaterCombo == "day") {
-                            numberoftimes = (jende - end) / 86400000;
-                        } else if (repeaterCombo == "week") {
-                            numberoftimes = (jende - end) / 86400000 / 7;
-                        } else if (repeaterCombo == "month") {
-                            numberoftimes = (jende.getMonth() - end.getMonth());
-                        } else if (repeaterCombo == "year") {
-                            numberoftimes = (jende.getYear() - end.getYear());
-                        }
-                    }
-                    if (repeaterCombo != "none") {
-                        // add createScheduledJob for every numberoftimes
-                        for (var i=1; i <= numberoftimes; i++) {
-                            if (repeaterCombo == "day") {
-                                begin.setDate(begin.getDate() + 1);
-                                end.setDate(end.getDate() + 1);
-                            } else if (repeaterCombo == "week") {
-                                begin.setDate(begin.getDate() + 7);
-                                end.setDate(end.getDate() + 7);
-                            } else if (repeaterCombo == "month") {
-                                var yx = begin.getYear() + 1900;
-                                var mx = begin.getMonth() + 1;
-                                var dx = begin.getDate();
-                                var mmx = begin.getMinutes();
-                                var hx = begin.getHours();
-                                begin = new Date(yx, mx, dx, hx, mmx);
-
-                                var yx = end.getYear() + 1900;
-                                var mx = end.getMonth() + 1;
-                                var dx = end.getDate();
-                                var mmx = end.getMinutes();
-                                var hx = end.getHours();
-                                end = new Date(yx, mx, dx, hx, mmx);
-                            } else if (repeaterCombo == "year") {
-                                var yx = begin.getYear() + 1900 + 1;
-                                var mx = begin.getMonth();
-                                var dx = begin.getDate();
-                                var mmx = begin.getMinutes();
-                                var hx = begin.getHours();
-                                begin = new Date(yx, mx, dx, hx, mmx);
-
-                                var yx = end.getYear() + 1900 + 1;
-                                var mx = end.getMonth();
-                                var dx = end.getDate();
-                                var mmx = end.getMinutes();
-                                var hx = end.getHours();
-                                end = new Date(yx, mx, dx, hx, mmx);
-                            }
-                            scheduleName = objectName+"###"+begin.getTime()+"###"+state;
-
-                            job = new Object();
-                            job.objectName = objectName;
-                            job.scheduleName = scheduleName;
-
-                            job.TYPE = TYPE;
-                            job.state = state;
-                            job.time = begin;
-
-                            createScheduledJob(job);
-
-                            // Create job for true and false
-                            scheduleName = objectName+"###"+end.getTime()+"###"+!state;
-
-                            job = new Object();
-                            job.objectName = objectName;
-                            job.scheduleName = scheduleName;
-
-                            job.TYPE = TYPE;
-                            job.state = !state;
-                            job.time = end;
-                            createScheduledJob(job);
-                        }
-                    }
-                    //loadData();
-                    //createObjects(new Object());
-
-                    var updateName = adapter.namespace + "." + IDID + ".update";
-                    adapter.setState(updateName, {val: "latest", ack: true});
-                    adapter.log.warn("getData done");
+                    // TODO: remove
+                    /*
+                     var updateName = adapter.namespace + "." + IDID + ".update";
+                     adapter.setState(updateName, {val: "latest", ack: true});
+                     */
                     return;
 
                 } else if (TYPE == 'VARDP') {
@@ -588,7 +471,6 @@ var adapter = utils.adapter({
 
                 var obj = objects[IDID];
                 if (obj.common != undefined && obj.common.role != undefined && (obj.common.role == "switch" || obj.common.role == "state")) {
-                    IDID = IDID.replace(".", ":");
                     objectName = IDID;
 
                     state = array['switcher'];
@@ -615,12 +497,15 @@ var adapter = utils.adapter({
                     }
                 }
                 adapter.delObject(id, function(err,res) {
-                    adapter.log.error("ERR: " + err);
-                    adapter.log.error("RES: " + res);
+                    adapter.log.debug("ERR: delObject " + err);
+                    adapter.log.debug("RES: delObject " + res);
                 });
-
-                var updateName = adapter.namespace + "." + addr + "update";
-                adapter.setState(updateName, {val: "latest", ack: true});
+                // TODO: remove
+                /*
+                 var updateName = adapter.namespace + "." + IDID + ".update";
+                 adapter.setState(updateName, {val: "latest", ack: true});
+                 return;
+                 */
             }
         }
 
@@ -643,6 +528,7 @@ var adapter = utils.adapter({
     stateChange: function (id, state) {
         adapter.log.debug("ID " + id + " = " + JSON.stringify(state));
 
+        // TODO: remove .update
         if (id.search("occ.0") == 0 && id.search(".update") > 0) {
             getData(function () {
                 adapter.log.info("stateChange for id: " + id + " value: " + JSON.stringify(state));
@@ -655,7 +541,12 @@ var adapter = utils.adapter({
                 adapter.log.info(id + " active");
             } else {
                 adapter.log.info(id + " done");
-                loadData();
+                id = id.replace(".CONFIG_PENDING","");
+                // TODO: id = hm-rpc.0.JEQ0550466.0, but must = occ.0.hm-rpc.0.JEQ0550466.1.TEMPERATURE
+                id = adapter.namespace + "." + id.slice(0, id.length-2);
+                adapter.objects.getObjectList({startkey: id, endkey: id + '\u9999'}, function (err, res) {
+                    loadData(id);
+                });
             }
         }
 
@@ -731,70 +622,26 @@ function createScheduledJob(job) {
     }
 }
 
-function loadData() {
+function loadData(objectID) {
     var e = "enum.occ.";
-    for (var i=0; i<enums.length; i++) {
-        var enu = enums[i];
-        if (enu.search(e) == 0) {
-            var res = objects[enu];
 
-            adapter.log.debug("Adapter getEnum: "+JSON.stringify(res));
-            adapter.log.debug("Adapter getEnum Result: "+res);
+    // Load only specific Object, cause CONFIG_PENDING was done
+    if (objectID != undefined) {
+        loadObject(objectID);
+    } else {
+        for (var i = 0; i < enums.length; i++) {
+            var enu = enums[i];
+            if (enu.search(e) == 0) {
+                var res = objects[enu];
 
-            adapter.log.debug("EnumGroup: "+res['common'].name);
-            var len = res['common'].members.length;
-            for (var l = 0; l < len; l++) {
-                var member = res['common'].members[l];
+                adapter.log.debug("Adapter getEnum: "+JSON.stringify(res));
+                adapter.log.debug("Adapter getEnum Result: "+res);
 
-                var localObject = objects[member];
-                adapter.log.debug(JSON.stringify(localObject));
-
-                adapter.log.debug("Member: " + member);
-
-                // TODO: Get Parent from localObject and check if member is a thermostat or a state
-                var elems = member.split(".");
-                var instance = elems[0] + "." + elems[1];
-                var objName = elems[2];
-                var address = instance + "." + objName;
-                var lObject = objects[address];
-                var updateName = adapter.namespace+"."+member+".update", updateObj;
-                var objx = objects[updateName];
-                if (objx == undefined) {
-                    var updateObj = {
-                        "type": "state",
-                        "common": {
-                            name: "update",
-                            role: 'meta.config',
-                            type: "string",
-                            read: true,
-                            write: true
-                        },
-                        "native": {},
-                    };
-                    adapter.log.info("setObject for id " + updateName);
-                    adapter.setObject(updateName, updateObj);
-                }
-                if (lObject !== undefined && lObject.native.TYPE !== undefined) {
-                    var memberType = lObject.native.TYPE;
-                    var thermostat = thermostatArray[memberType];
-                    if (thermostat != undefined) {
-                        var paramType = thermostat.paramset;
-                        if (paramType == undefined) {
-                            paramType = thermostatArray['paramset'];
-                        }
-                        var param_chn = thermostat.param_chn;
-                        if (param_chn == undefined) {
-                            param_chn = thermostatArray['param_chn']
-                        }
-                        var masterID = lObject._id + "." + param_chn;
-
-                        // Get initial Objects
-                        getParamsets(masterID, paramType, true, null, member);
-                    } else if (objects[member] == undefined) {
-                        return new Error("Member " + member + " not found");
-                    } else {
-                        parseScheduler(member);
-                    }
+                adapter.log.debug("EnumGroup: "+res['common'].name);
+                var len = res['common'].members.length;
+                for (var l = 0; l < len; l++) {
+                    var member = res['common'].members[l];
+                    loadObject(member);
                 }
             }
         }
@@ -802,9 +649,71 @@ function loadData() {
     writeEvents2ioBroker("#Object", "");
 }
 
+function loadObject(member) {
+    var localObject = objects[member];
+    adapter.log.debug(JSON.stringify(localObject));
+
+    adapter.log.debug("Member: " + member);
+
+    // TODO: Get Parent from localObject and check if member is a thermostat or a state
+    var elems = member.split(".");
+    var instance = elems[0] + "." + elems[1];
+    var objName = elems[2];
+    var address = instance + "." + objName;
+    var lObject = objects[address];
+
+    /* TODO: remove
+     var updateName = adapter.namespace + "." + member + ".update", updateObj;
+     var objx = objects[updateName];
+     if (objx == undefined) {
+     var updateObj = {
+     "type": "state",
+     "common": {
+     name: "update",
+     role: 'meta.config',
+     type: "string",
+     read: true,
+     write: true
+     },
+     "native": {},
+     };
+     adapter.log.info("setObject for id " + updateName);
+     adapter.setObject(updateName, updateObj);
+     }
+     */
+    if (lObject !== undefined && lObject.native.TYPE !== undefined) {
+        var memberType = lObject.native.TYPE;
+        var thermostat = thermostatArray[memberType];
+        if (thermostat != undefined) {
+            var paramType = thermostat.paramset;
+            if (paramType == undefined) {
+                paramType = thermostatArray['paramset'];
+            }
+            var param_chn = thermostat.param_chn;
+            if (param_chn == undefined) {
+                param_chn = thermostatArray['param_chn']
+            }
+            var masterID = lObject._id + "." + param_chn;
+
+            // Get initial Objects
+            getParamsets(masterID, paramType, true, null, member);
+        } else if (objects[member] == undefined) {
+            return new Error("Member " + member + " not found");
+        } else {
+            parseScheduler(member);
+        }
+    }
+}
+
 function addiCalObjects() {
     // Todo: Allow more then one Instance
     var id = "ical.0.data.table"/*JS iCal table*/;
+
+    adapter.getForeignState(id, function (err, state) {
+        if (err || !state) {
+            obj.state = false;
+        }
+    });
 
     var res = states[id];
     var events = [];
@@ -1015,7 +924,7 @@ function createObjects(allEvents) {
         } else {
             var allEV = JSON.parse(allEvents);
             if (allEV) {
-                var updateName;
+                // var updateName;
                 for (var i in allEV) {
                     var event = allEV[i];
                     if (event != null) {
@@ -1026,9 +935,8 @@ function createObjects(allEvents) {
                         var switcher = event.switcher;
                         object = objects[IDID.replace(":", ".")];
 
-                        //var objectName = adapter.namespace + "." + object._id + "." + event.id;
                         var objectName = adapter.namespace + "." + object._id + "." + title;
-                        updateName = adapter.namespace + "." + object._id + ".update";
+                        // updateName = adapter.namespace + "." + object._id + ".update";
 
                         var stateObj = {
                             common: {
@@ -1042,6 +950,7 @@ function createObjects(allEvents) {
                             type:   'state'
                         };
                         adapter.setObject(objectName, stateObj);
+                        adapter.log.info("setState for " + objectName);
 
                         var colorName = adapter.namespace + "." + object._id + ".color";
                         var colorObj = {
@@ -1057,20 +966,20 @@ function createObjects(allEvents) {
                         };
                         adapter.setObject(colorName, colorObj);
                         adapter.setState(colorName, {val: event.color, ack: true});
-
-                        var updateObj = {
-                            "type": "state",
-                            "common": {
-                                name: "update",
-                                role: 'meta.config',
-                                type: "string",
-                                read: true,
-                                write: true
-                            },
-                            "native": {},
-                        };
-                        adapter.setObject(updateName, updateObj);
-
+                        /*
+                         var updateObj = {
+                         "type": "state",
+                         "common": {
+                         name: "update",
+                         role: 'meta.config',
+                         type: "string",
+                         read: true,
+                         write: true
+                         },
+                         "native": {},
+                         };
+                         adapter.setObject(updateName, updateObj);
+                         */
                         if (start.getTime() > 0) {
                             if (start.getDate() == now.getDate()) {
                                 var time = formatDate(start);
@@ -1087,7 +996,7 @@ function createObjects(allEvents) {
                         }
                     }
                 }
-                adapter.setState(updateName, {val: "latest", ack: true});
+                // adapter.setState(updateName, {val: "latest", ack: true});
             }
         }
     }
@@ -1097,7 +1006,7 @@ function getParamsets(objectID, paramType, switcher, rootID, member) {
     adapter.log.debug(adapter.namespace);
     adapter.log.debug(objectID);
     var objectsID = objectID.split(".");
-    adapter.log.info("try to getParamset: "+objectID );
+    adapter.log.info("try to getParamset: "+objectID+" rootID:"+rootID+" member:"+member+" switcher(decalc):"+switcher );
 
     var ID = objectsID[objectsID.length-2] + ":" + objectsID[objectsID.length-1];
     var instance = objectsID[0] + "." + objectsID[1];
@@ -1182,29 +1091,102 @@ function readEventsFromFile(ID, callback) {
 }
 
 function writeEvents2ioBroker(ID, event) {
+    adapter.log.error("writeEvents2ioBroker for " + ID);
     ID = ID.replace(":",".");
     // TODO: REMOVE
     //adapter.writeFile(adapter.namespace, 'occ-events_'+ID+'.json', event);
     createObjects(event);
 }
 
-function putParamsets(address, params, paramType) {
+function putParamsets(address, params, paramType, ids) {
     if (!adapter.config.demo) {
         var objectsID = address.split(".");
         var ID = objectsID[objectsID.length - 1];
         var instance = objectsID[0] + "." + objectsID[1];
 
-        adapter.sendTo(instance, "putParamset", {ID: ID, paramType: paramType, params: params}, function (doc) {
-            var err = doc.error;
-            var data = doc.result;
-            adapter.log.debug("data = " + JSON.stringify(data));
-            adapter.log.debug("err  = " + JSON.stringify(err));
+        // TODO: rewrite Objecttree, only change params that were changed
+        adapter.sendTo(instance, "getParamset", {ID: ID, paramType: paramType}, function (readObj) {
+            var err = readObj.error;
+            var data = readObj.result;
 
-            if (!err) {
-                adapter.log.info("putParamset was successfull for " + ID);
+            // TODO: Only write TEMPERATUR AND TIMEOUT OBJECTS IF THEY EXISTS WITHIN EVENTS
+            var address = ID.replace(":", ".");
+            var object = objects[instance+"."+address];
+            var TYPE = object.native.PARENT_TYPE;
+
+            /* ################################## */
+            // TODO: Check how much Objects are for each day exists. Only valid Items are allowed
+            var timeoutName = "";
+            var temperatureName = "";
+
+            var thermostat = thermostatArray[TYPE];
+            if (thermostat != undefined) {
+                temperatureName = thermostat.timeoutText;
+                if (temperatureName == undefined) {
+                    temperatureName = thermostatArray.timeoutText;
+                }
+                temperatureName = temperatureName[0] + "_";
+
+                timeoutName = thermostat.timeoutText;
+                if (timeoutName == undefined) {
+                    timeoutName = thermostatArray.timeoutText;
+                }
+                timeoutName = timeoutName[1] + "_";
+
             } else {
-                adapter.log.error("putParamset Error: " + JSON.stringify(err));
+                return new Error("'type' must defined within io-package.json as type thermostat");
             }
+
+            var weekDays = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'];
+
+            for (var weekday in weekDays) {
+                var firstMidnight = 0;
+
+                for (var i = 1; i < 25; i++) {
+                    var tempName = temperatureName + weekDays[weekday] + "_" + i;
+                    var timeName = timeoutName + weekDays[weekday] + "_" + i;
+
+                    var tempObject = params[tempName];
+                    var timeObject = params[timeName];
+                    if (timeObject == 1440) {
+                        firstMidnight = 1;
+                    }
+
+                    if (firstMidnight == 1) {
+                        // Create Array with this Objects
+                        data[tempName] = tempObject;
+                        data[timeName] = timeObject;
+                        firstMidnight = 2;
+                    } else if (firstMidnight == 2) {
+                        // Set Default Values
+                        // data[tempName] = {explicitDouble: 18};
+                        // data[timeName] = 1440;
+                        delete data[timeName];
+                        delete data[tempName];
+                    } else {
+                        if (tempObject == undefined) {
+                            adapter.log.error("tempObject is undefined");
+                        }
+                        data[tempName] = tempObject;
+                        data[timeName] = timeObject;
+                    }
+                }
+            }
+            /* ################################## */
+
+            adapter.sendTo(instance, "putParamset", {ID: ID, paramType: paramType, params: data}, function (doc) {
+//            adapter.sendTo(instance, "putParamset", {ID: ID, paramType: paramType, params: params}, function (doc) {
+                var err = doc.error;
+                var data = doc.result;
+                adapter.log.debug("data = " + JSON.stringify(data));
+                adapter.log.debug("err  = " + JSON.stringify(err));
+
+                if (!err) {
+                    adapter.log.info("putParamset was successfull for " + ID);
+                } else {
+                    adapter.log.error("putParamset Error: " + JSON.stringify(err));
+                }
+            });
         });
     }
 }
@@ -1217,52 +1199,158 @@ function changeState(address, params) {
 }
 
 function parseScheduler(ID) {
-    readEventsFromFile(ID, function (data) {
-        if (data != undefined && data != "[null]" && data.length > 2) {
-            var jsonData = JSON.parse(data);
-            for (var i = 0; i < jsonData.length; i++) {
-                var event = jsonData[i];
-                if (event != null) {
-                    var dt = new Date(event.start);
-
-                    dt.setHours = dt.getHours + 2;
-                    event.start = dt;
-
-                    dt = new Date(event.end);
-
-                    dt.setHours = dt.getHours + 2;
-                    event.end = dt;
-
-                    var IDID = event.IDID;
-                    var TYPE = event.subType;
-
-                    var state = event.switcher;
-
-                    // Todo: create recurring Events
-                    var objectName = IDID;
-
-                    var scheduleName = objectName+"###"+event.start.getTime()+"###"+state;
-
-                    var job = new Object();
-                    job.objectName = objectName;
-                    job.scheduleName = scheduleName;
-                    job.TYPE = TYPE;
-
-                    // Create job for true and false
-                    job.state = state;
-                    job.time = event.start;
-                    createScheduledJob(job);
-
-                    scheduleName = objectName+"###"+event.end.getTime()+"###"+!state;
-                    job.scheduleName = scheduleName;
-                    job.state = !state;
-                    job.time = event.end;
-                    createScheduledJob(job);
-                }
-            }
-            writeEvents2ioBroker(ID, data);
+    adapter.objects.getObjectList({startkey: 'occ.0.' + ID, endkey: 'occ.0.' + ID + '\u9999'}, function (err, res) {
+        res = res.rows;
+        for (var i = 0; i < res.length; i++) {
+            var id = res[i].doc.common.name;
+            // TODO: remove
+            /*
+             if (id == "update") {
+             // do nothing
+             } else {
+             */
+            var object = res[i].doc;
+            createJob(object);
+            //}
         }
     });
+}
+
+function createJob(object) {
+    var IDID = object.native.IDID;
+    var TYPE = object.native.TYPE;
+
+    var start;
+    var end;
+    var begin;
+    var objectName;
+    var state;
+    var scheduleName;
+    var job;
+
+    start = object.native.start;
+    end = object.native.end;
+
+    begin = new Date(start);
+    end = new Date(end);
+
+    var allDay = object.native.allDay;
+    if (allDay == true) {
+        adapter.log.info("allDay Value for " + IDID);
+    }
+
+    objectName = IDID;
+    state = object.native.switcher;
+
+    scheduleName = objectName + "###" + begin.getTime() + "###" + state;
+
+    job = new Object();
+    job.objectName = objectName;
+    job.scheduleName = scheduleName;
+    job.TYPE = TYPE;
+
+    job.state = state;
+    job.time = begin;
+
+    createScheduledJob(job);
+
+    // Create job for true and false
+    scheduleName = objectName + "###" + end.getTime() + "###" + !state;
+
+    job = new Object();
+    job.objectName = objectName;
+    job.scheduleName = scheduleName;
+
+    job.TYPE = TYPE;
+    job.state = !state;
+    job.time = end;
+    createScheduledJob(job);
+
+    // Feature: add Support for recurring Events
+    var numberoftimes = object.native.numberoftimes; // 2
+    var repeaterCombo = object.native.repeaterCombo; // day
+    var jqdEnd = object.native.jqdEnd; // "07/02/2015"
+    var jende = new Date(jqdEnd);
+    if (jqdEnd != undefined && jqdEnd != "" && numberoftimes == 0) {
+        var m = end.getMinutes();
+        var h = end.getHours();
+        jende.setMinutes(m);
+        jende.setHours(h);
+
+        if (repeaterCombo == "day") {
+            numberoftimes = (jende - end) / 86400000;
+        } else if (repeaterCombo == "week") {
+            numberoftimes = (jende - end) / 86400000 / 7;
+        } else if (repeaterCombo == "month") {
+            numberoftimes = (jende.getMonth() - end.getMonth());
+        } else if (repeaterCombo == "year") {
+            numberoftimes = (jende.getYear() - end.getYear());
+        }
+    }
+
+    if (repeaterCombo != "none") {
+        // add createScheduledJob for every numberoftimes
+        for (var i = 1; i <= numberoftimes; i++) {
+            if (repeaterCombo == "day") {
+                begin.setDate(begin.getDate() + 1);
+                end.setDate(end.getDate() + 1);
+            } else if (repeaterCombo == "week") {
+                begin.setDate(begin.getDate() + 7);
+                end.setDate(end.getDate() + 7);
+            } else if (repeaterCombo == "month") {
+                var yx = begin.getYear() + 1900;
+                var mx = begin.getMonth() + 1;
+                var dx = begin.getDate();
+                var mmx = begin.getMinutes();
+                var hx = begin.getHours();
+                begin = new Date(yx, mx, dx, hx, mmx);
+
+                var yx = end.getYear() + 1900;
+                var mx = end.getMonth() + 1;
+                var dx = end.getDate();
+                var mmx = end.getMinutes();
+                var hx = end.getHours();
+                end = new Date(yx, mx, dx, hx, mmx);
+            } else if (repeaterCombo == "year") {
+                var yx = begin.getYear() + 1900 + 1;
+                var mx = begin.getMonth();
+                var dx = begin.getDate();
+                var mmx = begin.getMinutes();
+                var hx = begin.getHours();
+                begin = new Date(yx, mx, dx, hx, mmx);
+
+                var yx = end.getYear() + 1900 + 1;
+                var mx = end.getMonth();
+                var dx = end.getDate();
+                var mmx = end.getMinutes();
+                var hx = end.getHours();
+                end = new Date(yx, mx, dx, hx, mmx);
+            }
+            scheduleName = objectName + "###" + begin.getTime() + "###" + state;
+
+            job = new Object();
+            job.objectName = objectName;
+            job.scheduleName = scheduleName;
+
+            job.TYPE = TYPE;
+            job.state = state;
+            job.time = begin;
+
+            createScheduledJob(job);
+
+            // Create job for true and false
+            scheduleName = objectName + "###" + end.getTime() + "###" + !state;
+
+            job = new Object();
+            job.objectName = objectName;
+            job.scheduleName = scheduleName;
+
+            job.TYPE = TYPE;
+            job.state = !state;
+            job.time = end;
+            createScheduledJob(job);
+        }
+    }
 }
 
 function nextDay(d, dow){

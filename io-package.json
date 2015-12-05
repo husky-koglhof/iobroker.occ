@@ -1,11 +1,16 @@
 {
     "common": {
-        "name":                     "occ",
-        "version":                  "0.2.1",
+        "name":         {
+            "de": "OCC",
+            "en": "OCC",
+            "ru": "OCC"
+        },
+        "version":                  "0.2.2",
         "title":                    "ObjectControlCalendar Adapter",
         "desc": {
             "de": "Objekt Kontrolle in Webkalender mittels /Javascript/Node.js",
-            "en": "Javascript/Node.js based Object Control Calendar adapter"
+            "en": "Javascript/Node.js based Object Control Calendar adapter",
+            "ru": "Управление объектами через календарь"
         },
         "platform":                 "Javascript/Node.js",
         "mode":                     "daemon",
@@ -40,16 +45,8 @@
                 "TEMPERATURE",
                 "ENDTIME"
             ],
-            "mode": [
-                "CONTROL_MODE",
-                0
-            ],
             "HM-CC-TC": {
                 "name": "HM-CC-TC",
-                "mode": [
-                    "MODE_TEMPERATUR_REGULATOR",
-                    1
-                ],
                 "param_chn": 2,
                 "decalc_chn": 2,
                 "decalc_time": [

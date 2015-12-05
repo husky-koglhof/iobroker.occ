@@ -228,7 +228,12 @@ das Modul in ioBroker integriert ist.
 
 
 ## Changelog
-
+### 0.2.2
+- bluefox) Sprache in io-package.json hinzugefügt
+  (husky-koglhof)
+  Hardcodierung entfernt
+  Fehler beim ändern von Kalendereinträgen behoben
+  
 ### 0.2.1
 * (husky-koglhof)
 - Bugfix:
