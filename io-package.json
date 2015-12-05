@@ -1,6 +1,6 @@
 {
     "common": {
-        "name": "OCC",
+        "name": "occ",
         "version":                  "0.2.2",
         "title":                    "ObjectControlCalendar Adapter",
         "desc": {
