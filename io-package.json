@@ -1,7 +1,7 @@
 {
     "common": {
         "name": "occ",
-        "version":                  "0.2.2",
+        "version":                  "0.2.3",
         "title":                    "ObjectControlCalendar Adapter",
         "desc": {
             "de": "Objekt Kontrolle in Webkalender mittels /Javascript/Node.js",
