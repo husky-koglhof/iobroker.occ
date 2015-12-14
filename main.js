@@ -544,6 +544,7 @@ var adapter = utils.adapter({
                 id = id.replace(".CONFIG_PENDING","");
                 // TODO: id = hm-rpc.0.JEQ0550466.0, but must = occ.0.hm-rpc.0.JEQ0550466.1.TEMPERATURE
                 id = adapter.namespace + "." + id.slice(0, id.length-2);
+                adapter.log.info("getObjectList for " + id);
                 adapter.objects.getObjectList({startkey: id, endkey: id + '\u9999'}, function (err, res) {
                     loadData(id);
                 });
@@ -563,7 +564,7 @@ var adapter = utils.adapter({
                     addiCalObjects();
                 });
             }
-        } else if (state.ack != undefined && state.ack != true) {
+        } else if (state != undefined && state.ack != undefined && state.ack != true) {
             adapter.log.debug('This stateChange is not acknowledged');
         }
     },
@@ -888,7 +889,7 @@ function formatDate(date) {
     var minutes = date.getMinutes();
     //var ampm = hours >= 12 ? 'pm' : 'am';
     //hours = hours % 12;
-    hours = hours ? hours : 12; // the hour '0' should be '12'
+    hours = hours ? hours : 0; // the hour '0' should be '12'
     hours = hours < 10 ? '0'+hours : hours;
     minutes = minutes < 10 ? '0'+minutes : minutes;
     var strTime = hours + ':' + minutes; // + ' ' + ampm;
@@ -927,6 +928,8 @@ function createObjects(allEvents) {
                 // var updateName;
                 for (var i in allEV) {
                     var event = allEV[i];
+                    var temperature = event.temperature;
+
                     if (event != null) {
                         var start = new Date(event.start);
                         var end = new Date(event.end);
@@ -980,23 +983,75 @@ function createObjects(allEvents) {
                          };
                          adapter.setObject(updateName, updateObj);
                          */
-                        if (start.getTime() > 0) {
-                            if (start.getDate() == now.getDate()) {
+                        if (event.temperature === undefined) {
+                            if (event.title === "DECALCIFICATION") {
                                 var time = formatDate(start);
-                                var state = switcher ? "Einschalten" : "Ausschalten";
-                                dayTable += warn + "Today " + time + warn2 + " " + object.common.name + ", " + state + "</span></span><br>";
+                                dayTable += warn + "Today " + time + warn2 + " " + object.common.name + ", Decalcification</span></span><br>";
+                            } else {
+                                if (start.getTime() > 0) {
+                                    if (start.getDate() == now.getDate()) {
+                                        var time = formatDate(start);
+                                        var state = switcher ? "Einschalten" : "Ausschalten";
+                                        dayTable += warn + "Today " + time + warn2 + " " + object.common.name + ", " + state + "</span></span><br>";
+                                    }
+                                }
+                                if (end.getTime() > 0) {
+                                    if (end.getDate() == now.getDate()) {
+                                        var time = formatDate(end);
+                                        var state = !switcher ? "Einschalten" : "Ausschalten";
+                                        dayTable += warn + "Today " + time + warn2 + " " + object.common.name + ", " + state + "</span></span><br>";
+                                    }
+                                }
                             }
-                        }
-                        if (end.getTime() > 0) {
-                            if (end.getDate() == now.getDate()) {
-                                var time = formatDate(end);
-                                var state = !switcher ? "Einschalten" : "Ausschalten";
-                                dayTable += warn + "Today " + time + warn2 + " " + object.common.name + ", " + state + "</span></span><br>";
+                        } else {
+                            if (start.getTime() > 0) {
+                                if (start.getDate() == now.getDate()) {
+                                    var time = formatDate(start);
+                                    dayTable += warn + "Today " + time + warn2 + " " + object.common.name + ", " + temperature + "° Celsius</span></span><br>";
+                                }
                             }
                         }
                     }
                 }
-                // adapter.setState(updateName, {val: "latest", ack: true});
+                // TODO: If Decalc Day is not today, don't write dayTable new
+                // TODO: If Decalc Day is today, extend dayTable
+                if (dayTable !== "") {
+                    var htmlID = IDID + ".html";
+                    if (event.title === "DECALCIFICATION") {
+                        adapter.getState(htmlID, function (err, state) {
+                            var htmlObj = {
+                                "type": "state",
+                                "common": {
+                                    name: "html",
+                                    role: 'meta.config',
+                                    type: "string",
+                                    read: true,
+                                    write: true
+                                },
+                                "native": {},
+                            };
+                            adapter.extendObject(htmlID, htmlObj);
+
+                            dayTable += state.val;
+                            adapter.setState(htmlID, {val: dayTable, ack: true});
+                        });
+                    } else {
+                        var htmlObj = {
+                            "type": "state",
+                            "common": {
+                                name: "html",
+                                role: 'meta.config',
+                                type: "string",
+                                read: true,
+                                write: true
+                            },
+                            "native": {},
+                        };
+                        adapter.extendObject(htmlID, htmlObj);
+
+                        adapter.setState(htmlID, {val: dayTable, ack: true});
+                    }
+                }
             }
         }
     }
@@ -1172,6 +1227,34 @@ function putParamsets(address, params, paramType, ids) {
                     }
                 }
             }
+
+            /* ################################## */
+            var decalc_day = thermostat.decalc_day;
+            var decalc_time = thermostat.decalc_time;
+            var decalcTime;
+            var dmin;
+            var dhour;
+
+            if (decalc_day == undefined) {
+                decalc_day = thermostatArray.decalc_day;
+            }
+            if (decalc_time == undefined) {
+                decalc_time = thermostatArray.decalc_time;
+            }
+            if (decalc_time instanceof Array && decalc_time.length == 2) {
+                dmin = decalc_time[0];
+                dhour = decalc_time[1];
+                var min = params[dmin];
+                var hour = params[dhour];
+                decalcTime = (hour*60)+min;
+
+                data[decalc_day] = params[decalc_day];
+                data[dmin] = params[dmin];
+                data[dhour] = params[dhour];
+            } else {
+                data[decalc_time] = params[decalc_time];
+            }
+
             /* ################################## */
 
             adapter.sendTo(instance, "putParamset", {ID: ID, paramType: paramType, params: data}, function (doc) {
@@ -1418,6 +1501,10 @@ function parseDecalc(jsonEvent, ID, type, parent, member) {
         decalcDay-=1;
     }
 
+    // Bugfix: if it's sunday, we must calculate the current week
+    if (today.getDay() == 0) {
+        new Date(nextDay(today, decalcDay-14)).getDate();
+    }
     var day = new Date(nextDay(today, decalcDay)).getDate();
     var hours = Math.floor(decalcTime / 60);
     var minutes = decalcTime % 60;
@@ -1521,6 +1608,10 @@ function parseEvents(jsonEvent, ID, type, parent, member) {
             //for (var wk = 1; wk < 52; wk++) {
             for (var wk = 1; wk < 2; wk++) {
                 var n = today.getDay() - 1;
+                // BUGFIX: n is at sunday always -1, so go back 7 days
+                if (n === -1) {
+                    n = 6;
+                }
 
                 var year = today.getYear() + 1900;
                 var month = today.getMonth();
@@ -1651,7 +1742,7 @@ function parseEvents(jsonEvent, ID, type, parent, member) {
 
                         allEvents[parent + "." + ID].push(event);
 
-                        adapter.log.debug("START = " + event.start + " END = " + event.end);
+                        adapter.log.info("START = " + event.start + " END = " + event.end);
                     }
                 }
                 today.setTime(today.getTime() + 7 * (24*60*60*1000));

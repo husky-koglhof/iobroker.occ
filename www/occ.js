@@ -7,6 +7,25 @@ var states = {};
 var objects = {};
 var enums = [];
 
+/* **************************************************** */
+// var viewParam = location.search.split('view=')[1] ? location.search.split('view=')[1] : 'none';
+
+var params = {};
+var viewParam = "none";
+if (location.search) {
+    var parts = location.search.substring(1).split('&');
+
+    for (var i = 0; i < parts.length; i++) {
+        var nv = parts[i].split('=');
+        if (!nv[0]) continue;
+        if (nv[0] === "view") {
+            viewParam = nv[1];
+        }
+        params[nv[0]] = nv[1] || true;
+    }
+}
+/* **************************************************** */
+
 function nextDay(d, dow){
     d.setDate(d.getDate() + (dow+(7-d.getDay())) % 7);
     return d;
@@ -1838,16 +1857,16 @@ $(document).ready(function() {
                         },
                     },
                     header: {
-                        left: 'prev,next today customButton1,customButton2,customButton3',
-                        center: 'title',
-                        right: 'month,agendaWeek,agendaDay' // TODO: Generate customView
+                        left: viewParam === "none" ? 'prev,next today customButton1,customButton2,customButton3'  : "",
+                        center: viewParam === "none" ? 'title'  : "",
+                        right: viewParam === "none" ? 'month,agendaWeek,agendaDay' : "" // TODO: Generate customView
                     },
-                    defaultView: 'agendaWeek',
-                    editable: true,
+                    defaultView: viewParam === "none" ? 'agendaWeek' : 'agendaDay',
+                    editable: viewParam === "none" ? true : false,
                     eventLimit: true,
                     // allow "more" link when too many events
-                    selectable: true,
-                    selectHelper: true,
+                    selectable: viewParam === "none" ? true : false,
+                    selectHelper: viewParam === "none" ? true : false,
                     firstDay: 1,
                     timezone:'local',
                     // Select new Timerange = Create a new Planning Entry
@@ -2266,14 +2285,16 @@ $(document).ready(function() {
                                 readEventsFromObjects();
 
                                 var valArr = allElements;
-                                i = 0, size = valArr.length, $options = $('#allelements option');
+                                if (valArr !== undefined && valArr !== null) {
+                                    i = 0, size = valArr.length, $options = $('#allelements option');
 
-                                for(i; i < size; i++){
-                                    $options.filter('[value="'+valArr[i]+'"]').prop('selected', true);
+                                    for(i; i < size; i++){
+                                        $options.filter('[value="'+valArr[i]+'"]').prop('selected', true);
 
-                                    $("#allelements").multiselect("widget").find(":checkbox[value='"+valArr[i]+"']").each(function() {
-                                        this.click();
-                                    });
+                                        $("#allelements").multiselect("widget").find(":checkbox[value='"+valArr[i]+"']").each(function() {
+                                            this.click();
+                                        });
+                                    }
                                 }
                                 $("#allelements").multiselect("refresh");
                             });
@@ -2283,6 +2304,19 @@ $(document).ready(function() {
                 });;
 
                 $('#calendar').fullCalendar('rerenderEvents');
+
+                // TODO: Change Height, if called with parameter
+                //var x = document.getElementsByClassName('fc-time-grid-container');
+                //x[0].style.height = "100%";
+
+                if (viewParam !== "none") {
+                    $('#calendar').fullCalendar('option', 'aspectRatio', 0.1);
+
+                    $("#allelements").multiselect("widget").find(":checkbox[value='" + viewParam + "']").each(function () {
+                        this.click();
+                    });
+                    $("#allelements").multiselect("refresh");
+                }
             });
         }
     });
