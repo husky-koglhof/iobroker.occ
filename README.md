@@ -228,6 +228,12 @@ das Modul in ioBroker integriert ist.
 
 
 ## Changelog
+### 0.2.4
+- (husky-koglhof) iCal Variablensteuerung, Fehler behoben
+- Drag'n Drop der Events, Fehler behoben
+- iCal Events auf Read Only gesetzt
+- Logging angepasst
+
 ### 0.2.3
 - (husky-koglhof) Calendar per Parametersteuerung als iFrame in Vis anzeigbar
 

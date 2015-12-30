@@ -30,6 +30,8 @@
 
     <script type="text/javascript" src="_socket/info.js"></script>
     <script type="text/javascript" src="conn.js"></script>
+
+    <script type="text/javascript" src='functions.js'></script>
     <script type="text/javascript" src='occ.js'></script>
     <!-- Todo: add Touch Punch -->
 
@@ -48,7 +50,7 @@
         }
 
         #links { float: left; width: 130px; }
-        #mitte { margin: 0 130px;}
+        /* #mitte { margin: 0 130px;} */
     </style>
 
     <script>
@@ -73,6 +75,7 @@
         }
     </script>
 </head>
+<body>
 
 <div id="dialog-form" title="Select Options from Enums">
     <form>
@@ -89,7 +92,6 @@
                 </select>
             </p>
         </div>
-        <!-- Allow form submission with keyboard without duplicating the dialog button -->
         <input type="submit" tabindex="-1" style="position:absolute; top:-1000px">
     </form>
 </div>
@@ -97,7 +99,7 @@
 <div id="mitte"><div id='calendar'></div></div>
 
 <input type="text" id="IDID" value="0" style="display:none">
-<input type="text" id="IDPARENT" value="0" style="display:none">
+<input type="text" id="VARDP" value="0" style="display:none">
 <input type="text" id="IDTYPE" value="0" style="display:none">
 <div id="event_Dialog" title="Create a new Event" style="display: none; overflow: hidden">
     <input type="text" id="eventID" value="0" style="display:none">
@@ -438,5 +440,4 @@
     <input type="button" id="button_delete" name="button_delete" value="Delete" style="position:absolute;right:5px;top:397px;z-index:109;width:60px">
     <!-- Buttons -->
 </div>
-</body>
 </html>

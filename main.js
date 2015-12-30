@@ -152,6 +152,10 @@ var adapter = utils.adapter({
             var elems = address.split(".");
             var objName = elems[0]+"."+elems[1]+"."+elems[2];
             var obj = objects[objName];
+            if (obj.native == undefined && obj.native.TYPE == undefined) {
+                adapter.log.error("ID: " + id + " has no native.TYPE objectChange did not work, exit");
+                return;
+            }
             var TYPE = obj.native.TYPE;
             // TODO: remove
             /*
@@ -375,13 +379,13 @@ var adapter = utils.adapter({
                     if (err != undefined) adapter.log.error("err from deleteState: " + err);
                 });
                 return;
-            } else if (state.val == "save") {
-                TYPE = obj.native.TYPE;
+            } else if (state == "save") {
+                TYPE = obj.native.TYPE || obj.native.TypeName;
                 IDID = object.native.IDID;
 
                 var obj = objects[IDID];
                 // hm-rpc definition, role = switch, openzwave definition, role = state
-                if (obj.common != undefined && obj.common.role != undefined && (obj.common.role == "switch" || obj.common.role == "state")) {
+                if (obj.common != undefined && obj.common.role != undefined && (obj.common.role == "switch" || obj.common.role == "state") && TYPE !== "VARDP") {
                     createJob(object);
 
                     // TODO: remove
@@ -392,6 +396,7 @@ var adapter = utils.adapter({
                     return;
 
                 } else if (TYPE == 'VARDP') {
+                    var array = object.native;
                     start = array['start'];
                     end = array['end'];
                     begin = new Date(start);
@@ -460,10 +465,25 @@ var adapter = utils.adapter({
                         job.state = state;
                         job.time = begin;
                         createScheduledJob(job);
+
+                        // If true, create two Jobs
+                        if (obj.common.type == "boolean") {
+                            job = new Object();
+                            scheduleName = address + "###" + end.getTime() + "###" + !state;
+
+                            job.objectName = objectName;
+                            job.scheduleName = scheduleName;
+                            job.TYPE = TYPE;
+
+                            // Create job for true and false
+                            job.state = !state;
+                            job.time = end;
+                            createScheduledJob(job);
+                        }
                     }
                     loadData();
                 }
-            } else if (state.val == "delete") {
+            } else if (state == "delete") {
                 var array = object.native;
 
                 TYPE = obj.native.TYPE;
@@ -537,7 +557,7 @@ var adapter = utils.adapter({
 
         if (id.search("CONFIG_PENDING") > 0) {
             //adapter.log.debug(id + " = " + JSON.stringify(state));
-            if (state.val == true) {
+            if (state == true) {
                 adapter.log.info(id + " active");
             } else {
                 adapter.log.info(id + " done");
@@ -553,7 +573,7 @@ var adapter = utils.adapter({
 
         // Todo: remove hardcoded objects for MAX! Thermostat
         if (id.search("LEQ115") > 0) {
-            adapter.log.error("stateChange: ID " + id + " = " + JSON.stringify(state));
+            adapter.log.debug("stateChange: ID " + id + " = " + JSON.stringify(state));
         }
         // Todo: remove hardcoded instance number from ical
         if (id == "ical.0.data.table") {
@@ -647,7 +667,8 @@ function loadData(objectID) {
             }
         }
     }
-    writeEvents2ioBroker("#Object", "");
+    // No longer needed
+    //writeEvents2ioBroker("#Object", "");
 }
 
 function loadObject(member) {
@@ -710,173 +731,183 @@ function addiCalObjects() {
     // Todo: Allow more then one Instance
     var id = "ical.0.data.table"/*JS iCal table*/;
 
-    adapter.getForeignState(id, function (err, state) {
-        if (err || !state) {
-            obj.state = false;
-        }
-    });
+    adapter.getForeignState(id, function (err, res) {
+        if (!err && res) {
 
-    var res = states[id];
-    var events = [];
-    var event;
+            var events = [];
+            var event;
 
-    if (res != undefined && res.val != undefined) {
-        for (var i=0;i<res.val.length;i++) {
-            var ev = res.val[i];
+            if (res != undefined && res.val != undefined) {
+                for (var i=0;i<res.val.length;i++) {
+                    var ev = res.val[i];
 
-            // New Event
-            event = new Object();
-            var ID = ev._IDID;
+                    // New Event
+                    event = new Object();
+                    var ID = ev._IDID;
 
-            var IDID = ID;
+                    var IDID = ID;
 
-            event.start = new Date(ev._date);
-            event.end = new Date(ev._end);
-            event.title = ev.event;
-            event.subID = IDID;
+                    event.iCal = true;
+                    event.start = new Date(ev._date);
+                    event.end = new Date(ev._end);
+                    event.title = ev.event;
+                    event.subID = IDID;
 
-            var colorName = adapter.namespace + "." + ID + ".color";
-            if (colorName != undefined && states[colorName] != undefined) {
-                event.color = states[colorName].val;
-            } else {
-                event.color = colors[colorPicker];
-            }
-            adapter.log.debug("ID: " + ID + " color: " + event.color);
-            event.allDay = ev._allDay;
-            event.id = event.title + "_" + ID;
+                    var colorName = adapter.namespace + "." + ID + ".color";
+                    if (colorName != undefined && states[colorName] != undefined) {
+                        event.color = states[colorName].val;
+                    } else {
+                        event.color = colors[colorPicker];
+                    }
+                    adapter.log.debug("ID: " + ID + " color: " + event.color);
+                    event.allDay = ev._allDay;
+                    event.id = event.title + "_" + ID;
 
-            // Split ev._section (occ#LEQ0885447:1#true)
-            var state;
-            var elems = ev._section.split("#");
-            if (elems.length == 3 && elems[0] == "occ") {
-                var address = elems[1];
-                state = elems[2];
-                // *********************************************************
-                // Todo: Dummy Objects
-                event.repeater = "true";
-                var wk = 1;
-                var dateStart;
-                var editable;
+                    // Split ev._section (occ#LEQ0885447:1#true)
+                    var state;
+                    var elems = ev._section.split("#");
+                    if (elems.length == 3 && elems[0] == "occ") {
+                        var address = elems[1];
+                        state = elems[2];
+                        // *********************************************************
+                        // Todo: Dummy Objects
+                        event.repeater = "true";
+                        var wk = 1;
+                        var dateStart;
+                        var editable;
 
-                // Create recurring Event
-                if (wk == 1) {
-                    dateStart = event.start;
-                    editable = true;
-                    event.tooltip = "This is a recurring Event.";
-                } else {
-                    editable = false;
-                    event.title = event.title + " (Repeated Event)";
-                    event.tooltip = "This is a recurring Event.\n\nThe original Event can be found at\n" + dateStart;
-                }
+                        // Create recurring Event
+                        if (wk == 1) {
+                            dateStart = event.start;
+                            editable = true;
+                            event.tooltip = "This is a recurring Event.";
+                        } else {
+                            editable = false;
+                            event.title = event.title + " (Repeated Event)";
+                            event.tooltip = "This is a recurring Event.\n\nThe original Event can be found at\n" + dateStart;
+                        }
 
-                event.editable = editable;
-                event.startEditable = editable;
-                event.durationEditable = editable;
-                // Todo: create recurring Events
+                        event.editable = editable;
+                        event.startEditable = editable;
+                        event.durationEditable = editable;
+                        // Todo: create recurring Events
 
-                // Check if address has Fully Qualified Object Name like hm-rpc.0.LEQ088447:1.STATE
-                var objectID = address.replace(":",".");
-                var obj;
+                        // Check if address has Fully Qualified Object Name like hm-rpc.0.LEQ088447:1.STATE
+                        var objectID = address.replace(":",".");
+                        var obj;
 
-                if (states[objectID] != undefined) {
-                    obj = objects[objectID];
-                    adapter.log.info("Object found >>>>>> " + JSON.stringify(obj));
-                    adapter.log.info(objectID + " is a real address, State found");
+                        if (states[objectID] != undefined) {
+                            obj = objects[objectID];
+                            adapter.log.info("Object found >>>>>> " + JSON.stringify(obj));
+                            adapter.log.info(objectID + " is a real address, State found");
 
-                    address = objectID;
-                } else {
-                    // If we only knew the Name, we must check the Object Address
-                    var objectName = address;
+                            address = objectID;
+                        } else {
+                            // If we only knew the Name, we must check the Object Address
+                            var objectName = address;
 
-                    for (var object in objects) {
-                        obj = objects[object];
-                        adapter.log.debug("---> " + obj._id);
-                        if (obj.common != undefined && obj.common.name != undefined) {
-                            if (obj.common.name == objectName || obj._id == objectName) {
-                                adapter.log.debug("Object found <<<<<< " + JSON.stringify(obj));
-                                address = obj._id;
-                                break;
+                            for (var object in objects) {
+                                obj = objects[object];
+                                adapter.log.debug("---> " + obj._id);
+                                if (obj.common != undefined && obj.common.name != undefined) {
+                                    if (obj.common.name == objectName || obj._id == objectName) {
+                                        adapter.log.debug("Object found <<<<<< " + JSON.stringify(obj));
+                                        address = obj._id;
+                                        break;
+                                    }
+                                }
                             }
                         }
-                    }
-                }
 
-                if (obj.native != undefined) {
-                    if ( obj.native["TypeName"] != undefined) {
-                        event.subType = obj.native["TypeName"];
-                    } else if (obj.native["CONTROL"] != undefined) {
-                        event.subType = obj.native["CONTROL"];
-                    } else {
-                        event.subType = obj.native["PARENT_TYPE"];
-                    }
-                } else {
-                    event.subType = "VARDP";
-                }
-
-                //var obj = objects[IDID];
-                event.IDID = address;
-
-                var obj = objects[address];
-                if (obj.common != undefined && obj.common.role != undefined && (obj.common.role == "switch" || obj.common.role == "state")) {
-                    if (state == "on") {
-                        event.switcher = true;
-                        state = true;
-                        event.typo = "switch";
-                    } else if (state == "off") {
+                        event.VARDP = false;
                         event.switcher = false;
-                        state = false;
-                        event.typo = "switch";
-                    }
-                    event.state = state;
-                } else if (event.subType == "VARDP") {
-                    // Bugfix true | false comes as string so convert it to boolean
-                    if (state == "true") {
-                        event.state = true;
-                    } else if (state == "false") {
-                        event.state = false;
+
+                        if (obj.native != undefined) {
+                            // HM-REGA Variables
+                            if ( obj.native["TypeName"] != undefined && obj.native["TypeName"] == 'VARDP') {
+                                event.VARDP = true;
+                                event.subType = "VARDP";
+                                // Homematic Switch
+                            } else if (obj.native["CONTROL"] != undefined) {
+                                event.switcher = true;
+                                event.subType = "SWITCH";
+                                // Zwave Switch
+                            } else if (obj.native['Label'] != undefined && obj.native['Label'] == "Switch") {
+                                event.switcher = true;
+                                event.subType = "SWITCH";
+                            } else {
+                                event.subType = obj.native["PARENT_TYPE"];
+                            }
+                        } else {
+                            event.VARDP = true;
+                            event.subType = "VARDP";
+                        }
+
+                        event.IDID = address;
+
+                        var obj = objects[address];
+                        if (obj.common != undefined && obj.common.role != undefined && (obj.common.role == "switch" || obj.common.role == "state")) {
+                            if (state == "on") {
+                                event.switcher = true;
+                                state = true;
+                                event.typo = "switch";
+                            } else if (state == "off") {
+                                event.switcher = false;
+                                state = false;
+                                event.typo = "switch";
+                            }
+                            event.state = state;
+                        } else if (event.subType == "VARDP") {
+                            // Bugfix true | false comes as string so convert it to boolean
+                            if (state == "true") {
+                                event.state = true;
+                            } else if (state == "false") {
+                                event.state = false;
+                            } else {
+                                event.state = state;
+                            }
+                            event.typo = obj.common.type;
+                            event.valueType = obj.native.ValueType;
+                        } // else TEMPERATURE
+
+                        scheduleName = address + "###" + event.start.getTime() + "###" + event.state;
+
+                        job = new Object();
+                        job.objectName = address;
+                        job.scheduleName = scheduleName;
+                        job.TYPE = event.subType;
+
+                        // Create job for true and false
+                        job.state = state;
+                        job.time = event.start;
+                        createScheduledJob(job);
+
+                        // If true, create two Jobs
+                        if (event.typo == "boolean" || event.typo == "switch") {
+                            var job = new Object();
+                            var scheduleName = address + "###" + event.end.getTime() + "###" + !state;
+
+                            job.objectName = address;
+                            job.scheduleName = scheduleName;
+                            job.TYPE = event.subType;
+
+                            // Create job for true and false
+                            job.state = !state;
+                            job.time = event.end;
+                            createScheduledJob(job);
+                        } // else TEMPERATURE
+
+                        events.push(event);
+                        adapter.log.debug("NEW START = " + event.start + " NEW END = " + event.end);
+                        writeEvents2ioBroker("#iCal", JSON.stringify(events));
                     } else {
-                        event.state = state;
+                        adapter.log.error("No valid iCal Objects found, Description Text must be occ#OBJECT_ADDRESS#OBJECT_VALUE")
                     }
-                    event.typo = obj.common.type;
-                    event.valueType = obj.native.ValueType;
-                } // else TEMPERATURE
-
-                scheduleName = address + "###" + event.start.getTime() + "###" + event.state;
-
-                job = new Object();
-                job.objectName = address;
-                job.scheduleName = scheduleName;
-                job.TYPE = event.subType;
-
-                // Create job for true and false
-                job.state = state;
-                job.time = event.start;
-                createScheduledJob(job);
-
-                // If true, create two Jobs
-                if (event.typo == "boolean" || event.typo == "switch") {
-                    var job = new Object();
-                    var scheduleName = address + "###" + event.end.getTime() + "###" + !state;
-
-                    job.objectName = address;
-                    job.scheduleName = scheduleName;
-                    job.TYPE = event.subType;
-
-                    // Create job for true and false
-                    job.state = !state;
-                    job.time = event.end;
-                    createScheduledJob(job);
-                } // else TEMPERATURE
-
-                events.push(event);
-                adapter.log.debug("NEW START = " + event.start + " NEW END = " + event.end);
+                }
                 writeEvents2ioBroker("#iCal", JSON.stringify(events));
-            } else {
-                adapter.log.error("No valid iCal Objects found, Description Text must be occ#OBJECT_ADDRESS#OBJECT_VALUE")
             }
         }
-        writeEvents2ioBroker("#iCal", JSON.stringify(events));
-    }
+    });
 }
 
 var warn             = '<span style="font-weight: bold; color:red"><span class="icalWarn">';
@@ -952,8 +983,8 @@ function createObjects(allEvents) {
                             native: event,
                             type:   'state'
                         };
-                        adapter.setObject(objectName, stateObj);
-                        adapter.log.info("setState for " + objectName);
+                        adapter.extendObject(objectName, stateObj);
+                        adapter.log.debug("setState for " + objectName);
 
                         var colorName = adapter.namespace + "." + object._id + ".color";
                         var colorObj = {
@@ -967,7 +998,7 @@ function createObjects(allEvents) {
                             },
                             "native": {},
                         };
-                        adapter.setObject(colorName, colorObj);
+                        adapter.extendObject(colorName, colorObj);
                         adapter.setState(colorName, {val: event.color, ack: true});
                         /*
                          var updateObj = {
@@ -1061,7 +1092,7 @@ function getParamsets(objectID, paramType, switcher, rootID, member) {
     adapter.log.debug(adapter.namespace);
     adapter.log.debug(objectID);
     var objectsID = objectID.split(".");
-    adapter.log.info("try to getParamset: "+objectID+" rootID:"+rootID+" member:"+member+" switcher(decalc):"+switcher );
+    adapter.log.debug("try to getParamset: "+objectID+" rootID:"+rootID+" member:"+member+" switcher(decalc):"+switcher );
 
     var ID = objectsID[objectsID.length-2] + ":" + objectsID[objectsID.length-1];
     var instance = objectsID[0] + "." + objectsID[1];
@@ -1146,7 +1177,7 @@ function readEventsFromFile(ID, callback) {
 }
 
 function writeEvents2ioBroker(ID, event) {
-    adapter.log.error("writeEvents2ioBroker for " + ID);
+    adapter.log.debug("writeEvents2ioBroker for " + ID);
     ID = ID.replace(":",".");
     // TODO: REMOVE
     //adapter.writeFile(adapter.namespace, 'occ-events_'+ID+'.json', event);
@@ -1442,7 +1473,7 @@ function nextDay(d, dow){
 }
 
 function parseDecalc(jsonEvent, ID, type, parent, member) {
-    adapter.log.info("parseDecalc for " + ID);
+    adapter.log.debug("parseDecalc for " + ID);
     var decalcDay = "";
     var decalcTime = "";
 
@@ -1742,7 +1773,7 @@ function parseEvents(jsonEvent, ID, type, parent, member) {
 
                         allEvents[parent + "." + ID].push(event);
 
-                        adapter.log.info("START = " + event.start + " END = " + event.end);
+                        adapter.log.debug("START = " + event.start + " END = " + event.end);
                     }
                 }
                 today.setTime(today.getTime() + 7 * (24*60*60*1000));
