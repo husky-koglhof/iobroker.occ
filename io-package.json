@@ -1,34 +1,45 @@
 {
     "common": {
-        "name":                     "occ",
-        "version":                  "0.3.0",
-        "title":                    "ObjectControlCalendar Adapter",
+        "name": "occ",
+        "version": "0.3.0",
+        "title": "ObjectControlCalendar Adapter",
+        "platform": "Javascript/Node.js",
+        "mode": "daemon",
+        "icon": "calendar.png",
+        "extIcon": "https://raw.githubusercontent.com/husky-koglhof/ioBroker.occ/master/admin/calendar.png",
+        "loglevel": "info",
+        "localLink": "http://%ip%:%web_port%/occ/index.html",
+        "readme": "https://github.com/husky-koglhof/iobroker.occ/blob/master/README.md",
+        "installedVersion": "0.3.0",
+        "host": "macbookpro.local",
+        "license": "CC BY-NC 3.0",
+        "onlyWWW": false,
+        "singleton": true,
+        "messagebox": true,
+        "enabled": false,
         "desc": {
             "de": "Objekt Kontrolle in Webkalender mittels /Javascript/Node.js",
             "en": "Javascript/Node.js based Object Control Calendar adapter"
         },
-        "platform":                 "Javascript/Node.js",
-        "mode":                     "daemon",
-        "icon":                     "calendar.png",
-        "extIcon":                  "https://raw.githubusercontent.com/husky-koglhof/ioBroker.occ/master/admin/calendar.png",
-        "keywords":                 ["scheduler", "calendar", "jqxscheduler", "object control", "homematic"],
-        "loglevel":                 "info",
-        "localLink":		        "http://%ip%:%web_port%/occ/index.html",
-        "dependencies":             ["web", "ical", "hm-rpc"],
-        "readme":                   "https://github.com/husky-koglhof/iobroker.occ/blob/master/README.md",
-        "onlyWWW":                  false,
-        "singleton":                true,
-        "messagebox":               true,
-        "license":                  "CC BY-NC 3.0",
-        "adminTab":                {
-            "singleton":    true,
-            "name":         "OCC",
-            "link":         "http://%ip%:%web_port%/occ/index.html"
+        "keywords": [
+            "scheduler",
+            "calendar",
+            "jqxscheduler",
+            "object control",
+            "homematic"
+        ],
+        "dependencies": [
+            "web",
+            "ical",
+            "hm-rpc"
+        ],
+        "adminTab": {
+            "singleton": true,
+            "name": "OCC",
+            "link": "http://%ip%:%web_port%/occ/index.html"
         }
     },
     "native": {
-        "demo": false,
-        "ical": true,
         "size_mobile": "100%",
         "size_normal": "100%",
         "theme_normal": "bootstrap",
@@ -36,14 +47,16 @@
         "view_normal": "weekView",
         "view_mobile": "agendaView",
         "view_param": "agendaView",
-        "initThermostat": true,
-        "forceInit": true,
+        "demo": false,
+        "ical": false,
+        "initThermostat": false,
+        "forceInit": false,
         "thermostat": {
             "name": "Default",
             "paramset": "MASTER",
             "decalcset": "MASTER",
-            "param_chn": 0,
-            "decalc_chn": 0,
+            "param_chn": "0",
+            "decalc_chn": "0",
             "decalc_time": "DECALCIFICATION_TIME",
             "decalc_day": "DECALCIFICATION_WEEKDAY",
             "timeoutText": [
@@ -52,8 +65,8 @@
             ],
             "HM-CC-TC": {
                 "name": "HM-CC-TC",
-                "param_chn": 2,
-                "decalc_chn": 2,
+                "param_chn": "2",
+                "decalc_chn": "2",
                 "decalc_time": [
                     "DECALCIFICATION_MINUTE",
                     "DECALCIFICATION_HOUR"
@@ -69,13 +82,16 @@
             },
             "BC-RT-TRX-CyG-3": {
                 "name": "BC-RT-TRX-CyG-3",
-                "decalc_chn": 1,
+                "decalc_chn": "1",
                 "decalcset": "VALUES"
             }
-        }
-    },
-    "objects": [
-    ],
-    "instanceObjects": [
-    ]
+        },
+        "variable": [
+            "checkbox",
+            "listbox",
+            "numbers",
+            "inputbox",
+            "alarm"
+        ]
+    }
 }
