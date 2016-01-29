@@ -24,20 +24,29 @@
         "Objects Control Calendar Adapter settings": {
             "de": "Objects Control Calendar Adapter Einstellungen",
         },
-        "rpcListenIp_":           {"en": "RPC Listen Ip:",          "de": "RPC Listen IP:"},
-        "rpcListenPort_":         {"en": "RPC Listen Port Begin:",  "de": "RPC Listen Port Start:"},
-        "demo_":                  {"en": "Demo Mode (save back to object disabled)", "de": "Demo Modus (Daten werden nicht zurückgeschrieben"},
-        "ical_":                  {"en": "Use iCal Objects", "de": "iCal Objekte verwenden"},
-        "name":                   {"en": "Name", "de": "Name"},
-        "paramset":               {"en": "Params", "de": "Parameter"},
-        "decalcset":              {"en": "Decalc", "de": "Entkalkung"},
-        "param_chn":              {"en": "P-Channel", "de": "P-Kanal"},
-        "decalc_chn":             {"en": "D-Channel", "de": "D-Kanal"},
-        //"timeout":                {"en": "Timeout", "de": "Auszeit"},
-        //"temperature":            {"en": "Temperature", "de": "Temperatur"},
-        "decalc_time":            {"en": "D-Time", "de": "D-Zeit"},
-        "decalc_day":             {"en": "D-Day", "de": "D-Tag"},
-        "timeoutText":            {"en": "T-Text", "de": "T-Auszeit"},
+        "rpcListenIp_":             {"en": "RPC Listen Ip:",          "de": "RPC Listen IP:"},
+        "rpcListenPort_":           {"en": "RPC Listen Port Begin:",  "de": "RPC Listen Port Start:"},
+        "demo_":                    {"en": "Demo Mode (save back to thermostat disabled)", "de": "Demo Modus (Thermostaten werden nicht verändert)"},
+        "ical_":                    {"en": "Use iCal Objects", "de": "iCal Objekte verwenden"},
+        "forceinit_":               {"en": "Force Init (Remove Objects)", "de": "Entfernen und neuladen aller Objekte"},
+        "initthermostat_":          {"en": "Reload all known Homematic Thermostat", "de": "Neuladen aller bekannten Homematic Thermostaten"},
+        "name":                     {"en": "Name", "de": "Name"},
+        "paramset":                 {"en": "Params", "de": "Parameter"},
+        "decalcset":                {"en": "Decalc", "de": "Entkalkung"},
+        "param_chn":                {"en": "P-Channel", "de": "P-Kanal"},
+        "decalc_chn":               {"en": "D-Channel", "de": "D-Kanal"},
+        //"timeout":                 {"en": "Timeout", "de": "Auszeit"},
+        //"temperature":             {"en": "Temperature", "de": "Temperatur"},
+        "decalc_time":              {"en": "D-Time", "de": "D-Zeit"},
+        "decalc_day":               {"en": "D-Day", "de": "D-Tag"},
+        "timeoutText":              {"en": "T-Text", "de": "T-Auszeit"},
+        "theme_normal":             { "en": " Theme Browser", "de": "Thema Webbrowser"},
+        "theme_mobile":             { "en": " Theme Mobile", "de": "Thema Tablet"},
+        "view_param":               { "en": " View with Params", "de": "Ansicht mit Parametern"},
+        "view_normal":              { "en": " View Browser", "de": "Ansicht Webbrowser"},
+        "view_mobile":              { "en": " View Mobile", "de": "Ansicht Tablet"},
+        "size_normal":              { "en": " Size Browser", "de": "Grösse Tablet"},
+        "size_mobil":               { "en": " Size Mobile", "de": "Grösse Tablet"},
         "help_tip":               {
             "en": "On save the adapter restarts with new configuration immediately",
             "de": "Beim Speichern von Einstellungen der Adapter wird sofort neu gestartet.",
@@ -129,14 +138,6 @@
 
     function save(callback) {
         var obj = {};
-        $('.value').each(function () {
-            var $this = $(this);
-            if ($this.attr('type') == 'checkbox') {
-                obj[$this.attr('id')] = $this.prop('checked');
-            } else {
-                obj[$this.attr('id')] = $this.val();
-            }
-        });
 
         // Get edited table
         obj.devices = getTableResult('devices', ['name', 'paramset', 'decalcset', 'param_chn', 'decalc_chn', /*'timeout', 'temperature',*/ 'decalc_time', 'decalc_day', 'timeoutText']);
@@ -192,7 +193,16 @@
 
         var settings = {};
         settings['thermostat'] = thermostatArray;
-        console.log(JSON.stringify(thermostatArray));
+
+        $('.value').each(function () {
+            var $this = $(this);
+            if ($this.attr('type') == 'checkbox') {
+                settings[$this.attr('id')] = $this.prop('checked');
+            } else {
+                settings[$this.attr('id')] = $this.val();
+            }
+        });
+
         $('#save').button("disable");
         callback(settings);
     }
@@ -246,12 +256,22 @@
 </style>
 <!-- you have to put your config page in a div with id adapter-container -->
 <div id="adapter-container">
-    <table><tr><td><img src="logo.svg"></td><td><h3 class="translate">Objects Control Calendar Adapter settings</h3></td></tr></table>
+    <table><tr><td><img src="calendar.png"></td><td><h3 class="translate">Objects Control Calendar Adapter settings</h3></td></tr></table>
     <table>
         <p class="translate">help_tip</p>
         <th>OCC Options</th>
         <tr><td class="translate">demo_</td><td><input type='checkbox' id="demo" class="value"/></td></tr>
         <tr><td class="translate">ical_</td><td><input type='checkbox' id="ical" class="value"/></td></tr>
+        <tr><td class="translate">forceinit_</td><td><input type='checkbox' id="forceInit" class="value"/></td></tr>
+        <tr><td class="translate">initthermostat_</td><td><input type='checkbox' id="initThermostat" class="value"/></td></tr>
+
+        <tr><td class="translate">theme_normal</td><td><input type="text" id="theme_normal" class="value"></td></tr>
+        <tr><td class="translate">theme_mobile</td><td><input type="text" id="theme_mobile" class="value"></td></tr>
+        <tr><td class="translate">view_param</td><td><input type="text" id="view_param" class="value"></td></tr>
+        <tr><td class="translate">view_normal</td><td><input type="text" id="view_normal" class="value"></td></tr>
+        <tr><td class="translate">view_mobile</td><td><input type="text" id="view_mobile" class="value"></td></tr>
+        <tr><td class="translate">size_normal</td><td><input type="text" id="size_normal" class="value"></td></tr>
+        <tr><td class="translate">size_mobile</td><td><input type="text" id="size_mobile" class="value"></td></tr>
         <tr><td colspan="2">&nbsp;</td></tr>
         <th>Configuration Objects</th>
         <tr>

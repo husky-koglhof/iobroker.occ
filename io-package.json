@@ -1,18 +1,17 @@
 {
     "common": {
-        "name": "occ",
-        "version":                  "0.2.4",
+        "name":                     "occ",
+        "version":                  "0.3.0",
         "title":                    "ObjectControlCalendar Adapter",
         "desc": {
             "de": "Objekt Kontrolle in Webkalender mittels /Javascript/Node.js",
-            "en": "Javascript/Node.js based Object Control Calendar adapter",
-            "ru": "Управление объектами через календарь"
+            "en": "Javascript/Node.js based Object Control Calendar adapter"
         },
         "platform":                 "Javascript/Node.js",
         "mode":                     "daemon",
-        "icon":                     "logo.svg",
-        "extIcon":                  "http://fullcalendar.io/images/logo.svg",
-        "keywords":                 ["scheduler", "calendar", "fullcalendar", "object control", "homematic"],
+        "icon":                     "calendar.png",
+        "extIcon":                  "https://raw.githubusercontent.com/husky-koglhof/ioBroker.occ/master/admin/calendar.png",
+        "keywords":                 ["scheduler", "calendar", "jqxscheduler", "object control", "homematic"],
         "loglevel":                 "info",
         "localLink":		        "http://%ip%:%web_port%/occ/index.html",
         "dependencies":             ["web", "ical", "hm-rpc"],
@@ -20,6 +19,7 @@
         "onlyWWW":                  false,
         "singleton":                true,
         "messagebox":               true,
+        "license":                  "CC BY-NC 3.0",
         "adminTab":                {
             "singleton":    true,
             "name":         "OCC",
@@ -27,8 +27,17 @@
         }
     },
     "native": {
-        "demo": true,
-        "ical": false,
+        "demo": false,
+        "ical": true,
+        "size_mobile": "100%",
+        "size_normal": "100%",
+        "theme_normal": "bootstrap",
+        "theme_mobile": "mobile",
+        "view_normal": "weekView",
+        "view_mobile": "agendaView",
+        "view_param": "agendaView",
+        "initThermostat": true,
+        "forceInit": true,
         "thermostat": {
             "name": "Default",
             "paramset": "MASTER",
@@ -63,32 +72,10 @@
                 "decalc_chn": 1,
                 "decalcset": "VALUES"
             }
-        },
-        "variable": ["checkbox", "listbox", "numbers", "inputbox", "alarm"]
+        }
     },
     "objects": [
     ],
     "instanceObjects": [
-        {
-            "_id": "updated",
-            "type": "state",
-            "common": {
-                "name": "Some new devices added",
-                "type": "boolean",
-                "read":  true,
-                "write": true
-            }
-        },
-        {
-            "_id": "html",
-            "type": "channel",
-            "common": {
-                "name":  "HTML Table",
-                "type": "string",
-                "read":  true,
-                "write": true
-            },
-            "native": {}
-        }
     ]
 }

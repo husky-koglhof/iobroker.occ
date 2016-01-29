@@ -1,1 +1,4 @@
-tester.js
+.idea
+www/js/_socket
+www/js/jqwidgets
+node_modules

@@ -12,19 +12,53 @@
 var utils =    require(__dirname + '/lib/utils'); // Get common adapter utils
 var fs =      require('fs');
 var schedule =     require('node-schedule');
-var host;
-var port;
-var colors = ["#A7194B","#FE2712","#FB9902","#FABC02","#FEFE33","#D0EA2B","#66B032","#0391CE","#0247FE","#3D01A5","#8601AF","#006600","#006699","#0066FF","#33FF00","#660066","#66FF99","#CC0066","#CCFFCC","#FF9966"];
 
-var rega =              {};
+var colors = ["#307DD7", "#AA4643", "#89A54E", "#71588F", "#4198AF", "#7FD13B", "#EA157A", "#FEB80A", "#00ADDC", "#738AC8",
+    "#E8601A", "#FF9639", "#F5BD6A", "#599994", "#115D6E", "#D02841", "#FF7C41", "#FFC051", "#5B5F4D", "#364651", "#25A0DA",
+    "#309B46", "#8EBC00", "#FF7515", "#FFAE00", "#0A3A4A", "#196674", "#33A6B2", "#9AC836", "#D0E64B", "#CC6B32", "#FFAB48",
+    "#FFE7AD", "#A7C9AE", "#888A63", "#3F3943", "#01A2A6", "#29D9C2", "#BDF271", "#FFFFA6", "#1B2B32", "#37646F", "#A3ABAF",
+    "#E1E7E8", "#B22E2F", "#5A4B53", "#9C3C58", "#DE2B5B", "#D86A41", "#D2A825", "#993144", "#FFA257", "#CCA56A", "#ADA072",
+    "#949681", "#105B63", "#EEEAC5", "#FFD34E", "#DB9E36", "#BD4932", "#BBEBBC", "#F0EE94", "#F5C465", "#FA7642", "#FF1E54",
+    "#60573E", "#F2EEAC", "#BFA575", "#A63841", "#BFB8A3", "#444546", "#FFBB6E", "#F28D00", "#D94F00", "#7F203B", "#583C39",
+    "#674E49", "#948658", "#F0E99A", "#564E49", "#142D58", "#447F6E", "#E1B65B", "#C8782A", "#9E3E17", "#4D2B1F", "#635D61",
+    "#7992A2", "#97BFD5", "#BFDCF5", "#844341", "#D5CC92", "#BBA146", "#897B26", "#55591C", "#56626B", "#6C9380", "#C0CA55",
+    "#F07C6C", "#AD5472", "#96003A", "#FF7347", "#FFBC7B", "#FF4154", "#642223", "#5D7359", "#E0D697", "#D6AA5C", "#8C5430",
+    "#661C0E", "#16193B", "#35478C", "#4E7AC7", "#7FB2F0", "#ADD5F7", "#7B1A25", "#BF5322", "#9DA860", "#CEA457", "#B67818",
+    "#0081DA", "#3AAFFF", "#99C900", "#FFEB3D", "#309B46", "#0069A5", "#0098EE", "#7BD2F6", "#FFB800", "#FF6800", "#FF6800",
+    "#A0A700", "#FF8D00", "#678900", "#0069A5"];
+
+var types = {
+    0: 'global',
+    1: 'thermostat',
+    2: 'switch',
+    3: 'variable',
+    4: 'undefined',
+    5: 'decalc',
+    6: 'ical',
+    7: 'script',
+    global: 0,
+    homematic: 1,
+    switch: 2,
+    variable: 3,
+    undefined: 4,
+    decalc: 5,
+    ical: 6,
+    script: 7
+};
+
+var weekdays = {
+    'MO': 1,
+    'TU': 2,
+    'WE': 3,
+    'TH': 4,
+    'FR': 5,
+    'SA': 6,
+    'SU': 0
+};
+
 var objects =           {};
 var states =            {};
-var scripts =           {};
-var subscriptions =     [];
-var enums =             [];
-var channels =          null;
-var devices =           null;
-var attempts =          {};
+// var enums =             [];
 var allEvents = {};
 var colorPicker = 0;
 var scheduledJobs = {};
@@ -32,9 +66,38 @@ var scheduledJobs = {};
 var thermostatArray = [];
 var variableArray = [];
 
+// Todo: Allow more then one Instance
+var iCalID = "ical.0.data.table"; //JS iCal table
+
 function getData(callback) {
     var statesReady;
     var objectsReady;
+
+    adapter.config.initThermostat = true;
+
+    // TODO: Create an entry, to reload all Thermostats on every monday 00:01
+    if(adapter.config.forceInit == true) {
+        // If forceInit, we must reinit all known Thermostats
+        adapter.config.initThermostat = true;
+        adapter.objects.getObjectList({startkey: 'occ.' + adapter.instance, endkey: 'occ.' + adapter.instance + '\u9999'}, function (err, res) {
+            res = res.rows;
+            for (var i = 0; i < res.length; i++) {
+                var id = res[i].doc.common.name;
+
+                adapter.log.debug('Remove ' + id + ': ' + id);
+
+                adapter.delObject(id, function (res, err) {
+                    if (res != undefined && res != "Not exists") adapter.log.error("res from delObject: " + res);
+                    if (err != undefined) adapter.log.error("err from delObject: " + err);
+                });
+                adapter.deleteState(id, function (res, err) {
+                    if (res != undefined && res != "Not exists") adapter.log.error("res from deleteState: " + res);
+                    if (err != undefined) adapter.log.error("err from deleteState: " + err);
+                });
+            }
+        });
+        adapter.extendForeignObject('system.adapter.' + adapter.namespace, {native: {forceInit: false}});
+    }
 
     adapter.log.debug('requesting all states');
     adapter.getForeignStates('occ.*', function (err, res) {
@@ -45,13 +108,11 @@ function getData(callback) {
     });
     adapter.log.debug('requesting all objects');
 
-    adapter.objects.getObjectList({include_docs: true}, function (err, res) {
+    adapter.objects.getObjectList({include_docs: false}, function (err, res) {
         res = res.rows;
         objects = {};
-        enums = [];
         for (var i = 0; i < res.length; i++) {
             objects[res[i].doc._id] = res[i].doc;
-            if (res[i].doc.type === 'enum') enums.push(res[i].doc._id);
         }
 
         objectsReady = true;
@@ -81,36 +142,32 @@ var adapter = utils.adapter({
         });
 
     },
+    /*
     message: function (obj) {
         adapter.log.error("MESSAGE arrived: " + JSON.stringify(obj));
-        /* Split message
-         MESSAGE arrived: {"command":"send","message":{"start":"2015-07-05T13:18:39.332Z","end":"2015-07-05T13:18:39.332Z","title":"First Title","IDID":"#Object"},"from":"system.adapter.javascript.0","_id":5693}
-         */
+        // Split message
+        // MESSAGE arrived: {"command":"send","message":{"start":"2015-07-05T13:18:39.332Z","end":"2015-07-05T13:18:39.332Z","title":"First Title","objectID":"#Object"},"from":"system.adapter.javascript.0","_id":5693}
+
         var event = obj.message;
-        if (event.IDID == undefined || event.start == undefined || event.state == undefined || event.end == undefined || event.title == undefined) {
+        if (event.objectID == undefined || event.start == undefined || event.state == undefined || event.end == undefined || event.title == undefined) {
             adapter.log.error("sendTo was not successfull...");
         } else {
             // Dummy Objects
             event.subID = obj._id;
-            event.allDay = false;
-            event.id = event.title + "_" + event.id + "_" + event.IDID;
-            event.repeater = true;
-            event.tooltip = "";
+            event.id = event.title + "_" + event.id + "_" + event.objectID;
             event.editable = true;
-            event.startEditable = true;
-            event.durationEditable = true;
-            event.switcher = true;
+            event.state_switch = true;
             event.typo = "switch";
 
             event.start = new Date(event.start);
             event.end = new Date(event.end);
-            var scheduleName = event.IDID + "###" + event.start.getTime() + "###" + event.state;
+            var scheduleName = event.objectID + "###" + event.start.getTime() + "###" + event.state;
 
             job = new Object();
-            job.objectName = event.IDID;
+            job.objectName = event.objectID;
             job.scheduleName = scheduleName;
 
-            var obj = objects[event.IDID];
+            var obj = objects[event.objectID];
             job.TYPE = obj.type;
 
             // Create job for true and false
@@ -121,9 +178,9 @@ var adapter = utils.adapter({
             // If true, create two Jobs
             if (obj.common.type == "boolean") {
                 var job = new Object();
-                scheduleName = event.IDID + "###" + event.end.getTime() + "###" + !event.state;
+                scheduleName = event.objectID + "###" + event.end.getTime() + "###" + !event.state;
 
-                job.objectName = event.IDID;
+                job.objectName = event.objectID;
                 job.scheduleName = scheduleName;
                 job.TYPE = obj.type;
 
@@ -141,6 +198,7 @@ var adapter = utils.adapter({
         })
 
     },
+    */
     objectChange: function (id, object) {
         adapter.log.debug('objectChange ' + id + ' ' + JSON.stringify(object));
 
@@ -149,196 +207,145 @@ var adapter = utils.adapter({
         }
         if (id.search("occ.0") == 0) {
             var address = id.replace("occ.0.","");
-            var elems = address.split(".");
-            var objName = elems[0]+"."+elems[1]+"."+elems[2];
-            var obj = objects[objName];
-            if (obj.native == undefined && obj.native.TYPE == undefined) {
-                adapter.log.error("ID: " + id + " has no native.TYPE objectChange did not work, exit");
-                return;
-            }
-            var TYPE = obj.native.TYPE;
-            // TODO: remove
-            /*
-             if (id.search(".update") == 0) {
-             return;
-             }
-             */
 
-            if (address.search("_#") > 1) {
-                address = address.split("_#")[0];
-            }
-
-            if (id.search(".dummy") < 0) {
-                var addr = address.replace(object.native.title,"");
-
-                // var state = states["occ.0." + addr + "update"];
-                var state = object.common.eventState;
-                if (state == undefined) {
-                    return;
-                }
-            }
-
-            var decalc_address;
-            var param_address;
             var paramset = {};
             var decalcset = {};
-            var decalcType;
-            var first = true;
-            var start;
-            var end;
-            var IDID;
-            var begin;
-            var scheduleName;
-            var objectName;
-            var job;
-            var allJobs;
-            var date;
+            var state = object.common.eventState || "";
 
+            // Only if Homematic Thermostat
             if (id.search(".dummy") > 0) {
-                var objx = object.native;
+                // We need the Parent Object
+                var objectID = object.native.objectID;
+                var elems = objectID.split(".");
+                var parent = elems[0] + "." + elems[1] + "." + elems[2];
+                var objectType = objects[parent].native.TYPE;
 
-                for (var object in objx) {
-                    var o = objx[object];
+                var thermostat;
+                thermostat = thermostatArray[objectType];
+                if (thermostat == undefined) {
+                    return new Error("'type' must defined within io-package.json as type thermostat");
+                }
 
-                    var thermostat;
-                    IDID = o.IDID;
-
-                    var elems = IDID.split(".");
-                    var instance = elems[0] + "." + elems[1] + "." + elems[2];
-                    var obj = objects[instance];
-                    var TYPE = obj.native.TYPE;
-
-                    thermostat = thermostatArray[TYPE];
-                    if (thermostat == undefined) {
-                        return new Error("'type' must defined within io-package.json as type thermostat");
-                    }
-
-                    /*
-                     if (first == true) {
-                     if (thermostat.mode !== undefined) {
-                     var tname = thermostat.mode[0];
-                     var tvalue = thermostat.mode[1];
-                     decalcset = {};
-                     paramset = {};
-                     paramset[tname] = tvalue;
-                     } else {
-                     var tname = thermostatArray.mode[0];
-                     var tvalue = thermostatArray.mode[1];
-                     decalcset = {};
-                     paramset = {};
-                     decalcset[tname] = tvalue;
-                     }
-                     first = false;
-                     }
-                     */
-                    if (thermostat != undefined) {
-                        var temperature = o.temperature; // 17
-                        var title = o.title;
-                        var number = title.split("_")[2];
-                        number = number - 1;
-                        if (number == 0) {
-                            // Todo: it's the last entry from day before
-                            // TEMPERATUR_MONDAY_0 = TEMPERATUR_SUNDAY_???
-                        }
-
-                        start = o.start;
-                        end = o.end;
-                        var x = new Date(end);
-                        var hours = x.getHours();
-                        var min = x.getMinutes();
-
-                        var timeout = (hours * 60) + min;
-                        if (timeout == 0) {
-                            // Last Entry
-                            timeout = 1440;
-                        }
-
-                        var timeoutText = "";
-                        var tt;
-                        if (thermostat != undefined) {
-                            tt = thermostat.timeoutText;
-                            if (tt instanceof Array && tt.length == 2) {
-                                timeoutText = title.replace(tt[0], tt[1]);
-                            } else {
-                                tt = thermostatArray.timeoutText;
-                                timeoutText = title.replace(tt[0], tt[1]);
-                            }
-                        } else {
-                            return new Error("'type' must defined within io-package.json as type thermostat");
-                        }
-
-                        // Use correct address for push
-                        var decalc_chn = thermostat.decalc_chn;
-                        if (decalc_chn == undefined) {
-                            decalc_chn = thermostatArray['decalc_chn']
-                        }
-                        //decalc_address = IDID + ":" + decalc_chn;
-                        decalc_address = obj._id + ":" + decalc_chn;
-
-                        // Bugfix, Set Decalc
-                        // TODO: Check if DECALC needs extra channel (thermostat.decalc_chn)
-                        if (title == "DECALCIFICATION") {
-                            var decalcDay = new Date(start).getDay();
-
-                            /* Javascript Date
-                             0 = Sunday
-                             1 = Monday
-                             2 = Tuesday
-                             3 = Wednesday
-                             4 = Thursday
-                             5 = Friday
-                             6 = Saturday
-                             */
-
-                            /* Homematic Date
-                             0 = Saturday
-                             1 = Sunday
-                             2 = Monday
-                             3 = Tuesday
-                             4 = Wednesday
-                             5 = Thursday
-                             6 = Friday
-                             */
-
-                            if (decalcDay == 6) {
-                                decalcDay = 0;
-                            } else {
-                                decalcDay += 1;
-                            }
-
-                            var decalc_day;
-                            var decalc_time;
-                            var dmin;
-                            var dhour;
+                // We need all Objects from this parent
+                var rootID = 'occ.0.' + objectID;
+                for (var addr in objects) {
+                    if (addr.search(rootID) == 0) {
+                        if (addr.search(".color") < 0 && addr.search(".dummy") < 0) {
+                            var obj = objects[addr];
+                            var native = obj.native;
+// #################################################### //
                             if (thermostat != undefined) {
-                                decalcType = thermostat.decalcset;
-                                if (decalcType == undefined) {
-                                    decalcType = thermostatArray.decalcset;
+                                var temperature = native.state; // 17
+                                var title = native.subject;
+                                var number = title.split("_")[2];
+                                number = number - 1;
+                                if (number == 0) {
+                                    // Todo: it's the last entry from day before
+                                    // TEMPERATUR_MONDAY_0 = TEMPERATUR_SUNDAY_???
                                 }
-                                decalc_day = thermostat.decalc_day;
-                                if (decalc_day == undefined) {
-                                    decalc_day = thermostatArray.decalc_day;
+
+                                var from = native.from;
+                                var to = native.to;
+                                var x = new Date(to);
+                                var hours = x.getHours();
+                                var min = x.getMinutes();
+
+                                var timeout = (hours * 60) + min;
+                                if (timeout == 0) {
+                                    // Last Entry
+                                    timeout = 1440;
                                 }
-                                decalc_time = thermostat.decalc_time;
-                                if (decalc_time == undefined) {
-                                    decalc_time = thermostatArray.decalc_time;
-                                }
-                                if (decalc_time instanceof Array && decalc_time.length == 2) {
-                                    decalcset[decalc_time[0]] = new Date(start).getMinutes();
-                                    decalcset[decalc_time[1]] = new Date(start).getHours();
+
+                                var timeoutText = "";
+                                var tt;
+                                if (thermostat != undefined) {
+                                    tt = thermostat.timeoutText;
+                                    if (tt instanceof Array && tt.length == 2) {
+                                        timeoutText = title.replace(tt[0], tt[1]);
+                                    } else {
+                                        tt = thermostatArray.timeoutText;
+                                        timeoutText = title.replace(tt[0], tt[1]);
+                                    }
                                 } else {
-                                    decalcset[decalc_time] = (new Date(start).getHours() * 60) + new Date(start).getMinutes();
+                                    return new Error("'type' must defined within io-package.json as type thermostat");
                                 }
-                                decalcset[decalc_day] = decalcDay; //  0 => Saturday, ..., 6 => Friday
-                            } else {
-                                return new Error("'type' must defined within io-package.json as type thermostat");
+
+                                // Use correct address for push
+                                var decalc_chn = thermostat.decalc_chn;
+                                if (decalc_chn == undefined) {
+                                    decalc_chn = thermostatArray['decalc_chn']
+                                }
+                                var decalc_address = parent + ":" + decalc_chn;
+
+                                // Bugfix, Set Decalc
+                                // TODO: Check if DECALC needs extra channel (thermostat.decalc_chn)
+                                if (title == "DECALCIFICATION") {
+                                    var decalcDay = new Date(from).getDay();
+
+                                    /* Javascript Date
+                                     0 = Sunday
+                                     1 = Monday
+                                     2 = Tuesday
+                                     3 = Wednesday
+                                     4 = Thursday
+                                     5 = Friday
+                                     6 = Saturday
+                                     */
+
+                                    /* Homematic Date
+                                     0 = Saturday
+                                     1 = Sunday
+                                     2 = Monday
+                                     3 = Tuesday
+                                     4 = Wednesday
+                                     5 = Thursday
+                                     6 = Friday
+                                     */
+
+                                    if (decalcDay == 6) {
+                                        decalcDay = 0;
+                                    } else {
+                                        decalcDay += 1;
+                                    }
+
+                                    var decalc_day;
+                                    var decalc_time;
+                                    var dmin;
+                                    var dhour;
+                                    var decalcType;
+                                    if (thermostat != undefined) {
+                                        decalcType = thermostat.decalcset;
+                                        if (decalcType == undefined) {
+                                            decalcType = thermostatArray.decalcset;
+                                        }
+                                        decalc_day = thermostat.decalc_day;
+                                        if (decalc_day == undefined) {
+                                            decalc_day = thermostatArray.decalc_day;
+                                        }
+                                        decalc_time = thermostat.decalc_time;
+                                        if (decalc_time == undefined) {
+                                            decalc_time = thermostatArray.decalc_time;
+                                        }
+                                        if (decalc_time instanceof Array && decalc_time.length == 2) {
+                                            decalcset[decalc_time[0]] = new Date(from).getMinutes();
+                                            decalcset[decalc_time[1]] = new Date(from).getHours();
+                                        } else {
+                                            decalcset[decalc_time] = (new Date(from).getHours() * 60) + new Date(from).getMinutes();
+                                        }
+                                        decalcset[decalc_day] = decalcDay; //  0 => Saturday, ..., 6 => Friday
+                                    } else {
+                                        return new Error("'type' must defined within io-package.json as type thermostat");
+                                    }
+                                } else {
+                                    paramset[timeoutText] = timeout;
+                                    paramset[title] = {explicitDouble: parseFloat(temperature)};
+                                }
                             }
-                        } else {
-                            paramset[timeoutText] = timeout;
-                            paramset[title] = {explicitDouble: temperature};
+// #################################################### //
                         }
                     }
                 }
+
                 if (thermostat == undefined) {
                     return;
                 }
@@ -355,7 +362,7 @@ var adapter = utils.adapter({
                 } else {
                     param_chn = thermostat.param_chn;
                 }
-                param_address = obj._id+":"+param_chn;
+                var param_address = parent+":"+param_chn;
                 if (param_address == decalc_address) {
                     for (var value in decalcset) {
                         paramset[value] = decalcset[value];
@@ -365,11 +372,8 @@ var adapter = utils.adapter({
                     putParamsets(param_address, paramset, paramType);
                     putParamsets(decalc_address, decalcset, decalcType);
                 }
-                // TODO: remove
-                // var updateName = adapter.namespace + "." + IDID + ".update";
-                // adapter.setState(updateName, {val: "latest", ack: true});
 
-                var dummyName = adapter.namespace + "." + IDID + ".dummy";
+                var dummyName = adapter.namespace + "." + objectID + ".dummy";
                 adapter.delObject(dummyName, function (res, err) {
                     if (res != undefined && res != "Not exists") adapter.log.error("res from delObject: " + res);
                     if (err != undefined) adapter.log.error("err from delObject: " + err);
@@ -380,190 +384,105 @@ var adapter = utils.adapter({
                 });
                 return;
             } else if (state == "save") {
-                TYPE = obj.native.TYPE || obj.native.TypeName;
-                IDID = object.native.IDID;
+                // If originalData.subject diffs from subject, we must delete the original Object
+                if (object.native.originalData != undefined && object.native.originalData.subject != undefined && object.native.originalData.subject != object.native.subject) {
+                    var objectName = 'occ.0.' + object.native.objectID + "." + object.native.originalData.subject + "_#" + object.native.id + "#";
+                    adapter.log.info("Delete Object " + objectName);
+                    adapter.delObject(objectName, function(err,res) {
+                        adapter.log.debug("ERR: delObject " + err);
+                        adapter.log.debug("RES: delObject " + res);
+                    });
+                }
 
-                var obj = objects[IDID];
-                // hm-rpc definition, role = switch, openzwave definition, role = state
-                if (obj.common != undefined && obj.common.role != undefined && (obj.common.role == "switch" || obj.common.role == "state") && TYPE !== "VARDP") {
-                    createJob(object);
-
-                    // TODO: remove
-                    /*
-                     var updateName = adapter.namespace + "." + IDID + ".update";
-                     adapter.setState(updateName, {val: "latest", ack: true});
-                     */
+                if (object.native.type == types.homematic || object.native.type == types.decalc) {
+                    adapter.log.info("Nothing todo for Homematic Thermostat");
                     return;
-
-                } else if (TYPE == 'VARDP') {
-                    var array = object.native;
-                    start = array['start'];
-                    end = array['end'];
-                    begin = new Date(start);
-                    end = new Date(end);
-                    objectName = IDID;
-                    var address;
-
-                    state = array['state'];
-                    // So go on and find the correct Object
-                    if (array['subID'] !== undefined && array['subID'] == "google") {
-                        objectName = array['IDID'];
-                        var cr = false;
-                        /* ****************************************************** */
-                        for (var object in objects) {
-                            var obj = objects[object];
-                            adapter.log.debug("---> " + obj._id);
-                            var common = obj.common;
-                            if (common != undefined && common.name != undefined) {
-                                if (obj.common.name == objectName || obj._id == objectName) {
-                                    adapter.log.info("Object found <<<<<< " + JSON.stringify(obj));
-
-                                    address = obj._id;
-                                    cr = true;
-                                }
-
-                            }
-                            if (cr) {
-                                scheduleName = address + "###" + begin.getTime() + "###" + state;
-
-                                job = new Object();
-                                job.objectName = address;
-                                job.scheduleName = scheduleName;
-                                job.TYPE = TYPE;
-
-                                // Create job for true and false
-                                job.state = state;
-                                job.time = begin;
-                                createScheduledJob(job);
-
-                                // If true, create two Jobs
-                                if (obj.common.type == "boolean") {
-                                    job = new Object();
-                                    scheduleName = address + "###" + end.getTime() + "###" + !state;
-
-                                    job.objectName = address;
-                                    job.scheduleName = scheduleName;
-                                    job.TYPE = TYPE;
-
-                                    // Create job for true and false
-                                    job.state = !state;
-                                    job.time = end;
-                                    createScheduledJob(job);
-                                }
-                                cr = false;
-                            }
-                        }
-                        /* ****************************************************** */
-                    } else {
-                        scheduleName = objectName + "###" + begin.getTime() + "###" + state;
-
-                        job = new Object();
-                        job.objectName = objectName;
-                        job.scheduleName = scheduleName;
-                        job.TYPE = TYPE;
-
-                        job.state = state;
-                        job.time = begin;
-                        createScheduledJob(job);
-
-                        // If true, create two Jobs
-                        if (obj.common.type == "boolean") {
-                            job = new Object();
-                            scheduleName = address + "###" + end.getTime() + "###" + !state;
-
-                            job.objectName = objectName;
-                            job.scheduleName = scheduleName;
-                            job.TYPE = TYPE;
-
-                            // Create job for true and false
-                            job.state = !state;
-                            job.time = end;
-                            createScheduledJob(job);
-                        }
-                    }
-                    loadData();
+                } else if (object.native.type == types.switch) {
+                } else if (object.native.type == types.variable) {
+                } else if (object.native.type == types.ical) {
+                    adapter.log.info("Nothing todo for iCal Objects");
+                    return;
+                } else if (object.native.type == types.script) {
+                    adapter.sendTo("javascript", "Logging");
+                } else if (object.native.type == types.undefined) {
+                    adapter.log.info("Nothing todo for Undefined");
+                    return;
+                } else if (object.native.type == types.global) {
+                    adapter.log.info("Nothing todo for Global");
+                    return;
+                } else {
+                    adapter.log.info("No valid Type found, nothing todo");
+                    return;
                 }
+
+                if (object.native.originalState && object.native.originalState !== object.native.state) {
+                    adapter.log.info("Job Management, Delete cause of state were changed");
+                    var origState = object.native.state;
+                    object.native.state = object.native.originalState;
+                    jobManagement(object, undefined, false);
+                    object.native.state = origState;
+                    object.native.originalState = origState;
+                }
+
+                if ((object.native.originalData.from && object.native.originalData.from != object.native.from) ||
+                    (object.native.originalData.to && object.native.originalData.to != object.native.to)) {
+                    adapter.log.info("Job Management, Delete cause of from / to were changed");
+                    jobManagement(object, undefined, false);
+                }
+
+                // if recurrence exists, create new Jobs
+                var recurrencePattern = object.native.recurrencePattern;
+
+                // if originalData.recurrence exits and diffs from recurrence, delete all old Jobs
+                if (object.native.originalData.recurrencePattern && object.native.originalData.recurrencePattern != object.native.recurrencePattern) {
+                    var originalRecurrencePattern = object.native.originalData.recurrencePattern;
+                    adapter.log.info("RECURRENCEPATTERN ORIGINAL = " + originalRecurrencePattern);
+                    adapter.log.info("Job Management, Delete cause of recurrencePattern were changed");
+                    jobManagement(object, originalRecurrencePattern, false);
+                    object.native.originalData.recurrencePattern = recurrencePattern;
+                }
+
+                adapter.log.info("Job Management, Add");
+                jobManagement(object, recurrencePattern, true);
+
+                // loadData();
             } else if (state == "delete") {
-                var array = object.native;
+                console.log("Remove old scheduled Jobs if they exists");
 
-                TYPE = obj.native.TYPE;
-                IDID = object.native.IDID;
+                // if recurrence exists, remove all Jobs
+                var recurrencePattern = object.native.recurrencePattern;
 
-                var obj = objects[IDID];
-                if (obj.common != undefined && obj.common.role != undefined && (obj.common.role == "switch" || obj.common.role == "state")) {
-                    objectName = IDID;
+                adapter.log.info("Job Management, Delete");
+                jobManagement(object, recurrencePattern, false);
 
-                    state = array['switcher'];
-
-                    allJobs = schedule['scheduledJobs'];
-                    date = new Date(array['start']);
-                    scheduleName = objectName + "###" + date.getTime() + "###" + state;
-
-                    if (allJobs[scheduleName] != undefined) {
-                        adapter.log.debug("Cancel Job: " + scheduleName);
-                        allJobs[scheduleName].cancel();
-                    } else {
-                        adapter.log.debug("Job: " + scheduleName + " does not exists, do nothing");
-                    }
-
-                    date = new Date(array['end']);
-                    scheduleName = objectName + "###" + date.getTime() + "###" + !state;
-
-                    if (allJobs[scheduleName] != undefined) {
-                        adapter.log.debug("Cancel Job: " + scheduleName);
-                        allJobs[scheduleName].cancel();
-                    } else {
-                        adapter.log.debug("Job: " + scheduleName + " does not exists, do nothing");
-                    }
-                }
+                adapter.log.info("Delete Object " + id);
                 adapter.delObject(id, function(err,res) {
                     adapter.log.debug("ERR: delObject " + err);
                     adapter.log.debug("RES: delObject " + res);
                 });
-                // TODO: remove
-                /*
-                 var updateName = adapter.namespace + "." + IDID + ".update";
-                 adapter.setState(updateName, {val: "latest", ack: true});
-                 return;
-                 */
             }
         }
 
+        // TODO: Don't know what these means
         if (id.search("LEQ115") > 0) {
-            adapter.log.error("objectChange: ID " + id + " = " + JSON.stringify(state));
+            adapter.log.debug("objectChange: ID " + id + " = " + JSON.stringify(state));
         }
 
-        if (id.search("enum.occ") == 0) {
-            adapter.log.info("Enums has changed, reload Data from it...");
-            adapter.log.debug('objectChange ' + id + ' ' + JSON.stringify(object));
-            getData(function () {
-                loadData();
-                if (adapter.config.ical == true) {
-                    adapter.log.debug("init iCal Objects...");
-                    addiCalObjects();
-                }
-            });
-        }
+        // TODO: Reload after change from iCal, etc.
     },
     stateChange: function (id, state) {
         adapter.log.debug("ID " + id + " = " + JSON.stringify(state));
 
-        // TODO: remove .update
-        if (id.search("occ.0") == 0 && id.search(".update") > 0) {
-            getData(function () {
-                adapter.log.info("stateChange for id: " + id + " value: " + JSON.stringify(state));
-            });
-        }
-
         if (id.search("CONFIG_PENDING") > 0) {
             //adapter.log.debug(id + " = " + JSON.stringify(state));
-            if (state == true) {
+            if (state.val == true) {
                 adapter.log.info(id + " active");
             } else {
                 adapter.log.info(id + " done");
                 id = id.replace(".CONFIG_PENDING","");
-                // TODO: id = hm-rpc.0.JEQ0550466.0, but must = occ.0.hm-rpc.0.JEQ0550466.1.TEMPERATURE
-                id = adapter.namespace + "." + id.slice(0, id.length-2);
+                // TODO: id = hm-rpc.0.JEQ0550466.0, but must = hm-rpc.0.JEQ0550466.1.TEMPERATURE
+                //id = adapter.namespace + "." + id.slice(0, id.length-2);
+                id = id.slice(0, id.length-2);
                 adapter.log.info("getObjectList for " + id);
                 adapter.objects.getObjectList({startkey: id, endkey: id + '\u9999'}, function (err, res) {
                     loadData(id);
@@ -576,7 +495,7 @@ var adapter = utils.adapter({
             adapter.log.debug("stateChange: ID " + id + " = " + JSON.stringify(state));
         }
         // Todo: remove hardcoded instance number from ical
-        if (id == "ical.0.data.table") {
+        if (id == iCalID) {
             if (adapter.config.ical == true) {
                 adapter.log.info("ical has changed, reload Data");
                 adapter.log.debug('stateChange ' + id + ' ' + JSON.stringify(state));
@@ -592,6 +511,7 @@ var adapter = utils.adapter({
         try {
             // Todo create JSON File from all Jobs, so we can delete it, if occ was not running, while event was deleted
             writeEvents2ioBroker("scheduledJobs", JSON.stringify(scheduledJobs));
+
 
             adapter.log.info('cleaned everything up...');
             callback();
@@ -618,12 +538,13 @@ function createScheduledJob(job) {
             adapter.log.info("Create scheduled Object for " + job.objectName + " (" + job.TYPE + ") at " + job.time.toLocaleDateString() + " " + job.time.toLocaleTimeString() + ", state = " + job.state);
 
             var jobName = job.scheduleName;
+            adapter.log.info("scheduleName = " + jobName);
             scheduledJobs[jobName] = job;
 
             var a = schedule.scheduleJob(job.scheduleName, job.time, function(){
                 adapter.log.info("start changeState for TYPE " + job.TYPE + " address " + job.objectName);
                 var obj = objects[job.objectName];
-                if (obj.common != undefined && obj.common.role != undefined) {
+                if (obj != undefined && obj.common != undefined && obj.common.role != undefined) {
                     // hm-rpc switches has type channel and role switch
                     // zwave switches has type state and role state
                     if (obj.common.role == "switch" && obj.type != "state") {
@@ -632,7 +553,12 @@ function createScheduledJob(job) {
                         }
                     }
                 }
-                changeState(job.objectName, job.state);
+                if (job.TYPE == "script") {
+                    var script = job['state'].replace("script.js.","");
+                    adapter.sendTo("javascript", script);
+                } else {
+                    changeState(job.objectName, job.state);
+                }
                 a.cancel();
             });
         } else {
@@ -644,31 +570,29 @@ function createScheduledJob(job) {
 }
 
 function loadData(objectID) {
-    var e = "enum.occ.";
-
+    adapter.log.info("Reload Data for " + objectID);
     // Load only specific Object, cause CONFIG_PENDING was done
     if (objectID != undefined) {
         loadObject(objectID);
     } else {
-        for (var i = 0; i < enums.length; i++) {
-            var enu = enums[i];
-            if (enu.search(e) == 0) {
-                var res = objects[enu];
-
-                adapter.log.debug("Adapter getEnum: "+JSON.stringify(res));
-                adapter.log.debug("Adapter getEnum Result: "+res);
-
-                adapter.log.debug("EnumGroup: "+res['common'].name);
-                var len = res['common'].members.length;
-                for (var l = 0; l < len; l++) {
-                    var member = res['common'].members[l];
-                    loadObject(member);
+        if (adapter.config.initThermostat == true) {
+            var n = 'hm-rpc';
+            for (var obj in objects){
+                if (obj.search(n) == 0) {
+                    var o = objects[obj];
+                    if (o.type == "device") {
+                        var type = objects[obj].native.TYPE || "";
+                        var thermostat = thermostatArray[type];
+                        if (thermostat != undefined) {
+                            adapter.log.debug(type);
+                            loadObject(obj);
+                        }
+                    }
                 }
             }
+            adapter.extendForeignObject('system.adapter.' + adapter.namespace, {native: {initThermostat: false}});
         }
     }
-    // No longer needed
-    //writeEvents2ioBroker("#Object", "");
 }
 
 function loadObject(member) {
@@ -684,26 +608,7 @@ function loadObject(member) {
     var address = instance + "." + objName;
     var lObject = objects[address];
 
-    /* TODO: remove
-     var updateName = adapter.namespace + "." + member + ".update", updateObj;
-     var objx = objects[updateName];
-     if (objx == undefined) {
-     var updateObj = {
-     "type": "state",
-     "common": {
-     name: "update",
-     role: 'meta.config',
-     type: "string",
-     read: true,
-     write: true
-     },
-     "native": {},
-     };
-     adapter.log.info("setObject for id " + updateName);
-     adapter.setObject(updateName, updateObj);
-     }
-     */
-    if (lObject !== undefined && lObject.native.TYPE !== undefined) {
+    if (lObject !== undefined && lObject.native != undefined && lObject.native.TYPE !== undefined ) {
         var memberType = lObject.native.TYPE;
         var thermostat = thermostatArray[memberType];
         if (thermostat != undefined) {
@@ -724,375 +629,274 @@ function loadObject(member) {
         } else {
             parseScheduler(member);
         }
+    } else if (lObject !== undefined && lObject.native != undefined && lObject.native.TypeName != undefined && lObject.native.TypeName == "VARDP") {
+        parseScheduler(member);
     }
 }
 
 function addiCalObjects() {
-    // Todo: Allow more then one Instance
-    var id = "ical.0.data.table"/*JS iCal table*/;
-
-    adapter.getForeignState(id, function (err, res) {
+    adapter.getForeignState(iCalID, function (err, res) {
         if (!err && res) {
 
-            var events = [];
-            var event;
+        var events = [];
+        var event;
 
-            if (res != undefined && res.val != undefined) {
-                for (var i=0;i<res.val.length;i++) {
-                    var ev = res.val[i];
+        if (res != undefined && res.val != undefined) {
+            for (var i=0;i<res.val.length;i++) {
+                var ev = res.val[i];
 
-                    // New Event
-                    event = new Object();
-                    var ID = ev._IDID;
+                // New Event
+                event = new defaultEvent();
+                var ID = 'iCal';
+                event.objectID = ID;
 
-                    var IDID = ID;
+                event.type = types.iCal;
 
-                    event.iCal = true;
-                    event.start = new Date(ev._date);
-                    event.end = new Date(ev._end);
-                    event.title = ev.event;
-                    event.subID = IDID;
+                // SOLL: 2016-01-11 02:00:00
 
-                    var colorName = adapter.namespace + "." + ID + ".color";
-                    if (colorName != undefined && states[colorName] != undefined) {
-                        event.color = states[colorName].val;
+                event.from = new Date(ev._date);
+
+                event.to = new Date(ev._end);
+                event.subject = ev.event;
+                event.resourceId = 'iCal';
+                event.room = ev._class;
+                event.type = types.ical;
+                event.draggable = false;
+                event.resizable = false;
+
+//                event.readOnly = true;
+
+                // remove @ . from _IDID
+                var id = ev._IDID;
+                id = id.replace("@","");
+                id = id.replace(".","");
+                event.id = id;
+                event._id = ID;
+
+                var colorName = adapter.namespace + "." + ID + ".color";
+                if (colorName != undefined && states[colorName] != undefined) {
+                    event.background = states[colorName].val;
+                    event.color = "black";
+                } else {
+                    event.background = colors[colorPicker];
+                    event.color = "black";
+                }
+                adapter.log.debug("ID: " + ID + " color: " + event.background);
+                event.allDay = ev._allDay;
+
+                // Split ev._section (occ#LEQ0885447:1#true)
+                var state;
+                var elems = ev._section.split("#");
+                if (elems.length == 3 && elems[0] == "occ") {
+                    var address = elems[1];
+                    state = elems[2];
+                    // *********************************************************
+                    // Todo: Dummy Objects
+                    var wk = 1;
+                    var dateStart;
+                    var editable;
+
+                    // Create recurring Event
+                    if (wk == 1) {
+                        dateStart = event.start;
+                        editable = true;
                     } else {
-                        event.color = colors[colorPicker];
+                        editable = false;
+                        event.title = event.title + " (Repeated Event)";
+                        event.tooltip = "This is a recurring Event.\n\nThe original Event can be found at\n" + dateStart;
                     }
-                    adapter.log.debug("ID: " + ID + " color: " + event.color);
-                    event.allDay = ev._allDay;
-                    event.id = event.title + "_" + ID;
 
-                    // Split ev._section (occ#LEQ0885447:1#true)
-                    var state;
-                    var elems = ev._section.split("#");
-                    if (elems.length == 3 && elems[0] == "occ") {
-                        var address = elems[1];
-                        state = elems[2];
-                        // *********************************************************
-                        // Todo: Dummy Objects
-                        event.repeater = "true";
-                        var wk = 1;
-                        var dateStart;
-                        var editable;
+                    event.editable = editable;
+                    // Todo: create recurring Events
 
-                        // Create recurring Event
-                        if (wk == 1) {
-                            dateStart = event.start;
-                            editable = true;
-                            event.tooltip = "This is a recurring Event.";
-                        } else {
-                            editable = false;
-                            event.title = event.title + " (Repeated Event)";
-                            event.tooltip = "This is a recurring Event.\n\nThe original Event can be found at\n" + dateStart;
-                        }
+                    // Check if address has Fully Qualified Object Name like hm-rpc.0.LEQ088447:1.STATE
+                    var objectID = address.replace(":",".");
+                    var obj;
 
-                        event.editable = editable;
-                        event.startEditable = editable;
-                        event.durationEditable = editable;
-                        // Todo: create recurring Events
+                    if (states[objectID] != undefined) {
+                        obj = objects[objectID];
+                        adapter.log.info("Object found >>>>>> " + JSON.stringify(obj));
+                        adapter.log.info(objectID + " is a real address, State found");
 
-                        // Check if address has Fully Qualified Object Name like hm-rpc.0.LEQ088447:1.STATE
-                        var objectID = address.replace(":",".");
-                        var obj;
+                        address = objectID;
+                    } else {
+                        // If we only knew the Name, we must check the Object Address
+                        var objectName = address;
 
-                        if (states[objectID] != undefined) {
-                            obj = objects[objectID];
-                            adapter.log.info("Object found >>>>>> " + JSON.stringify(obj));
-                            adapter.log.info(objectID + " is a real address, State found");
-
-                            address = objectID;
-                        } else {
-                            // If we only knew the Name, we must check the Object Address
-                            var objectName = address;
-
-                            for (var object in objects) {
-                                obj = objects[object];
-                                adapter.log.debug("---> " + obj._id);
-                                if (obj.common != undefined && obj.common.name != undefined) {
-                                    if (obj.common.name == objectName || obj._id == objectName) {
-                                        adapter.log.debug("Object found <<<<<< " + JSON.stringify(obj));
-                                        address = obj._id;
-                                        break;
-                                    }
+                        for (var object in objects) {
+                            obj = objects[object];
+                            adapter.log.debug("---> " + obj._id);
+                            if (obj.common != undefined && obj.common.name != undefined) {
+                                if (obj.common.name == objectName || obj._id == objectName) {
+                                    adapter.log.debug("Object found <<<<<< " + JSON.stringify(obj));
+                                    address = obj._id;
+                                    break;
                                 }
                             }
                         }
+                    }
 
-                        event.VARDP = false;
-                        event.switcher = false;
+                    event.type = types.global;
+                    event.state_switch = false;
 
-                        if (obj.native != undefined) {
-                            // HM-REGA Variables
-                            if ( obj.native["TypeName"] != undefined && obj.native["TypeName"] == 'VARDP') {
-                                event.VARDP = true;
-                                event.subType = "VARDP";
-                                // Homematic Switch
-                            } else if (obj.native["CONTROL"] != undefined) {
-                                event.switcher = true;
-                                event.subType = "SWITCH";
-                                // Zwave Switch
-                            } else if (obj.native['Label'] != undefined && obj.native['Label'] == "Switch") {
-                                event.switcher = true;
-                                event.subType = "SWITCH";
-                            } else {
-                                event.subType = obj.native["PARENT_TYPE"];
-                            }
-                        } else {
-                            event.VARDP = true;
+                    if (obj.native != undefined) {
+                        // HM-REGA Variables
+                        if ( obj.native["TypeName"] != undefined && obj.native["TypeName"] == 'VARDP') {
+                            event.type = types.variable;
                             event.subType = "VARDP";
+                        // Homematic Switch
+                        } else if (obj.native["CONTROL"] != undefined) {
+                            event.type = types.switch;
+                            event.state_switch = true;
+                            event.subType = "SWITCH";
+                        // Zwave Switch
+                        } else if (obj.native['Label'] != undefined && obj.native['Label'] == "Switch") {
+                            event.type = types.switch;
+                            event.state_switch = true;
+                            event.subType = "SWITCH";
+                        } else {
+                            event.subType = obj.native["PARENT_TYPE"];
                         }
+                    } else {
+                        event.type = types.variable;
+                        event.subType = "VARDP";
+                    }
 
-                        event.IDID = address;
+                    event.objectID = address;
 
-                        var obj = objects[address];
-                        if (obj.common != undefined && obj.common.role != undefined && (obj.common.role == "switch" || obj.common.role == "state")) {
-                            if (state == "on") {
-                                event.switcher = true;
-                                state = true;
-                                event.typo = "switch";
-                            } else if (state == "off") {
-                                event.switcher = false;
-                                state = false;
-                                event.typo = "switch";
-                            }
+                    var obj = objects[address];
+                    if (obj.common != undefined && obj.common.role != undefined && (obj.common.role == "switch" || obj.common.role == "state")) {
+                        if (state == "on") {
+                            event.state_switch = true;
+                            state = true;
+                            event.typo = "switch";
+                        } else if (state == "off") {
+                            event.state_switch = false;
+                            state = false;
+                            event.typo = "switch";
+                        }
+                        event.state = state;
+                    } else if (event.subType == "VARDP") {
+                        // Bugfix true | false comes as string so convert it to boolean
+                        if (state == "true") {
+                            event.state = true;
+                        } else if (state == "false") {
+                            event.state = false;
+                        } else {
                             event.state = state;
-                        } else if (event.subType == "VARDP") {
-                            // Bugfix true | false comes as string so convert it to boolean
-                            if (state == "true") {
-                                event.state = true;
-                            } else if (state == "false") {
-                                event.state = false;
-                            } else {
-                                event.state = state;
-                            }
-                            event.typo = obj.common.type;
-                            event.valueType = obj.native.ValueType;
-                        } // else TEMPERATURE
+                        }
+                        event.typo = obj.common.type;
+                        event.valueType = obj.native.ValueType;
+                    } // else TEMPERATURE
 
-                        scheduleName = address + "###" + event.start.getTime() + "###" + event.state;
+                    scheduleName = address + "###" + event.start.getTime() + "###" + event.state;
 
-                        job = new Object();
+                    job = new Object();
+                    job.objectName = address;
+                    job.scheduleName = scheduleName;
+                    job.TYPE = event.subType;
+
+                    // Create job for true and false
+                    job.state = state;
+                    job.time = event.start;
+                    createScheduledJob(job);
+
+                    // If true, create two Jobs
+                    if (event.typo == "boolean" || event.typo == "switch") {
+                        var job = new Object();
+                        var scheduleName = address + "###" + event.end.getTime() + "###" + !state;
+
                         job.objectName = address;
                         job.scheduleName = scheduleName;
                         job.TYPE = event.subType;
 
                         // Create job for true and false
-                        job.state = state;
-                        job.time = event.start;
+                        job.state = !state;
+                        job.time = event.end;
                         createScheduledJob(job);
+                    } // else TEMPERATURE
 
-                        // If true, create two Jobs
-                        if (event.typo == "boolean" || event.typo == "switch") {
-                            var job = new Object();
-                            var scheduleName = address + "###" + event.end.getTime() + "###" + !state;
-
-                            job.objectName = address;
-                            job.scheduleName = scheduleName;
-                            job.TYPE = event.subType;
-
-                            // Create job for true and false
-                            job.state = !state;
-                            job.time = event.end;
-                            createScheduledJob(job);
-                        } // else TEMPERATURE
-
-                        events.push(event);
-                        adapter.log.debug("NEW START = " + event.start + " NEW END = " + event.end);
-                        writeEvents2ioBroker("#iCal", JSON.stringify(events));
-                    } else {
-                        adapter.log.error("No valid iCal Objects found, Description Text must be occ#OBJECT_ADDRESS#OBJECT_VALUE")
-                    }
+                    events.push(event);
+                    adapter.log.debug("NEW START = " + event.start + " NEW END = " + event.end);
+                    writeEvents2ioBroker("#iCal", JSON.stringify(events));
+                } else {
+                    adapter.log.error("No valid iCal Objects found, Description Text must be occ#OBJECT_ADDRESS#OBJECT_VALUE");
+                    events.push(event);
+                    writeEvents2ioBroker("#iCal", JSON.stringify(events));
                 }
-                writeEvents2ioBroker("#iCal", JSON.stringify(events));
             }
+            writeEvents2ioBroker("#iCal", JSON.stringify(events));
+        }
         }
     });
 }
 
-var warn             = '<span style="font-weight: bold; color:red"><span class="icalWarn">';
-var warn2            = '</span></span><span style="font-weight: normal; color:red"><span class="icalWarn2">';
-var prewarn          = '<span style="font-weight: bold; color:orange"><span class="icalPreWarn">';
-var prewarn2         = '</span></span><span style="font-weight: normal; color:orange"><span class="icalPreWarn2">';
-
-function formatDate(date) {
-    var hours = date.getHours();
-    var minutes = date.getMinutes();
-    //var ampm = hours >= 12 ? 'pm' : 'am';
-    //hours = hours % 12;
-    hours = hours ? hours : 0; // the hour '0' should be '12'
-    hours = hours < 10 ? '0'+hours : hours;
-    minutes = minutes < 10 ? '0'+minutes : minutes;
-    var strTime = hours + ':' + minutes; // + ' ' + ampm;
-    return strTime;
-}
-
 function createObjects(allEvents) {
-    // First parse all Events for this day / week
-    var now = new Date();
-    var dayTable = "";
-    var weekTable;
-    var monthTable;
     var object;
 
+    // TODO: Create complete Object Tree
+    // occ.0.hm-rpc.0.JEQ0550466.1.TEMPERATURE
     if (allEvents.length > 0) {
-        if( Object.prototype.toString.call( allEvents ) === '[object Array]' ) {
-            for (var i in allEvents) {
-                var event = allEvents[i];
-                var start = new Date(event.start);
-                var end = event.end;
-                var title = event.title;
-                var IDID = event.IDID;
-                var temperature = event.temperature;
-                object = objects[IDID.replace(":", ".")];
+        var allEV = JSON.parse(allEvents);
+        if (allEV) {
+            for (var i in allEV) {
+                var event = allEV[i];
 
-                if (start.getTime() > 0) {
-                    if (start.getDate() == now.getDate()) {
-                        var time = formatDate(start);
-                        dayTable += warn + "Today " + time + warn2 + " " + object.common.name + ", " + temperature + "° Celsius</span></span><br>";
-                    }
-                }
-            }
-        } else {
-            var allEV = JSON.parse(allEvents);
-            if (allEV) {
-                // var updateName;
-                for (var i in allEV) {
-                    var event = allEV[i];
-                    var temperature = event.temperature;
-
-                    if (event != null) {
-                        var start = new Date(event.start);
-                        var end = new Date(event.end);
-                        var title = event.title;
-                        var IDID = event.IDID;
-                        var switcher = event.switcher;
-                        object = objects[IDID.replace(":", ".")];
-
-                        var objectName = adapter.namespace + "." + object._id + "." + title;
-                        // updateName = adapter.namespace + "." + object._id + ".update";
-
-                        var stateObj = {
-                            common: {
-                                name:  objectName, // Todo: Thermostat Objects need objectName
-                                read:  true,
-                                write: true,
-                                type: 'state',
-                                role: 'meta.config'
-                            },
-                            native: event,
-                            type:   'state'
-                        };
-                        adapter.extendObject(objectName, stateObj);
-                        adapter.log.debug("setState for " + objectName);
-
-                        var colorName = adapter.namespace + "." + object._id + ".color";
-                        var colorObj = {
-                            "type": "state",
-                            common: {
-                                name:  "color",
-                                role: 'meta.config',
-                                read:  true,
-                                write: true,
-                                type: 'string'
-                            },
-                            "native": {},
-                        };
-                        adapter.extendObject(colorName, colorObj);
-                        adapter.setState(colorName, {val: event.color, ack: true});
-                        /*
-                         var updateObj = {
-                         "type": "state",
-                         "common": {
-                         name: "update",
-                         role: 'meta.config',
-                         type: "string",
-                         read: true,
-                         write: true
-                         },
-                         "native": {},
-                         };
-                         adapter.setObject(updateName, updateObj);
-                         */
-                        if (event.temperature === undefined) {
-                            if (event.title === "DECALCIFICATION") {
-                                var time = formatDate(start);
-                                dayTable += warn + "Today " + time + warn2 + " " + object.common.name + ", Decalcification</span></span><br>";
-                            } else {
-                                if (start.getTime() > 0) {
-                                    if (start.getDate() == now.getDate()) {
-                                        var time = formatDate(start);
-                                        var state = switcher ? "Einschalten" : "Ausschalten";
-                                        dayTable += warn + "Today " + time + warn2 + " " + object.common.name + ", " + state + "</span></span><br>";
-                                    }
-                                }
-                                if (end.getTime() > 0) {
-                                    if (end.getDate() == now.getDate()) {
-                                        var time = formatDate(end);
-                                        var state = !switcher ? "Einschalten" : "Ausschalten";
-                                        dayTable += warn + "Today " + time + warn2 + " " + object.common.name + ", " + state + "</span></span><br>";
-                                    }
-                                }
-                            }
-                        } else {
-                            if (start.getTime() > 0) {
-                                if (start.getDate() == now.getDate()) {
-                                    var time = formatDate(start);
-                                    dayTable += warn + "Today " + time + warn2 + " " + object.common.name + ", " + temperature + "° Celsius</span></span><br>";
-                                }
-                            }
-                        }
-                    }
-                }
-                // TODO: If Decalc Day is not today, don't write dayTable new
-                // TODO: If Decalc Day is today, extend dayTable
-                if (dayTable !== "") {
-                    var htmlID = IDID + ".html";
-                    if (event.title === "DECALCIFICATION") {
-                        adapter.getState(htmlID, function (err, state) {
-                            var htmlObj = {
-                                "type": "state",
-                                "common": {
-                                    name: "html",
-                                    role: 'meta.config',
-                                    type: "string",
-                                    read: true,
-                                    write: true
-                                },
-                                "native": {},
-                            };
-                            adapter.extendObject(htmlID, htmlObj);
-
-                            dayTable += state.val;
-                            adapter.setState(htmlID, {val: dayTable, ack: true});
-                        });
+                if (event != null) {
+                    var title = event.subject;
+                    var objectID = event.objectID;
+                    object = objects[objectID.replace(":", ".")];
+                    var id;
+                    if (object == undefined || object._id == undefined) {
+                        id = event._id;
                     } else {
-                        var htmlObj = {
-                            "type": "state",
-                            "common": {
-                                name: "html",
-                                role: 'meta.config',
-                                type: "string",
-                                read: true,
-                                write: true
-                            },
-                            "native": {},
-                        };
-                        adapter.extendObject(htmlID, htmlObj);
-
-                        adapter.setState(htmlID, {val: dayTable, ack: true});
+                        id = object._id;
                     }
+                    var objectName = adapter.namespace + "." + id + "." + title;
+
+                    var stateObj = {
+                        common: {
+                            name:  objectName,
+                            read:  true,
+                            write: true,
+                            type: 'state',
+                            role: 'meta.config'
+                        },
+                        native: event,
+                        type:   'state'
+                    };
+                    adapter.extendObject(objectName, stateObj);
+
+                    var colorName = adapter.namespace + "." + id + ".color";
+                    var colorObj = {
+                        "type": "state",
+                        common: {
+                            name:  "color",
+                            role: 'meta.config',
+                            read:  true,
+                            write: true,
+                            type: 'string'
+                        },
+                        "native": {},
+                    };
+                    adapter.extendObject(colorName, colorObj);
+                    adapter.setState(colorName, {val: event.background, ack: true});
                 }
             }
         }
     }
 }
 
-function getParamsets(objectID, paramType, switcher, rootID, member) {
+function getParamsets(objectID, paramType, flag, rootID, member, name) {
     adapter.log.debug(adapter.namespace);
     adapter.log.debug(objectID);
+    if (name == undefined) {
+        name = objects[member].common.name || objects[member]._id;
+    }
+
+    adapter.log.debug("PARSE: " + name);
     var objectsID = objectID.split(".");
-    adapter.log.debug("try to getParamset: "+objectID+" rootID:"+rootID+" member:"+member+" switcher(decalc):"+switcher );
+    adapter.log.debug("try to getParamset: "+objectID+" rootID:"+rootID+" member:"+member+" flag(decalc):"+flag );
 
     var ID = objectsID[objectsID.length-2] + ":" + objectsID[objectsID.length-1];
     var instance = objectsID[0] + "." + objectsID[1];
@@ -1120,8 +924,8 @@ function getParamsets(objectID, paramType, switcher, rootID, member) {
             }
             var myID;
 
-            if (switcher) {
-                parseEvents(data, ID, type, parent, member);
+            if (flag) {
+                parseEvents(data, ID, type, parent, member, name);
 
                 // TODO: Check if this type is in thermostatArray
                 var thermostat = thermostatArray[type];
@@ -1137,7 +941,7 @@ function getParamsets(objectID, paramType, switcher, rootID, member) {
                     }
                     var decalcID = parent + "." + channel[0]+"."+param_chn;
                     // Get Decalc Objects
-                    getParamsets(decalcID, paramType, false, parent+"."+ID, member);
+                    getParamsets(decalcID, paramType, false, parent+"."+ID, member, name);
 
                     colorPicker = colorPicker + 1;
                     adapter.log.debug("COLORPICKER" + colorPicker);
@@ -1149,7 +953,7 @@ function getParamsets(objectID, paramType, switcher, rootID, member) {
                 }
             } else {
                 allEvents[rootID] = [];
-                parseDecalc(data, rootID, type, parent, member);
+                parseDecalc(data, rootID, type, parent, member, name);
                 colorPicker = colorPicker + 1;
                 adapter.log.debug("COLORPICKER" + colorPicker);
                 myID = parent+"."+ID;
@@ -1163,24 +967,9 @@ function getParamsets(objectID, paramType, switcher, rootID, member) {
     });
 }
 
-function readEventsFromFile(ID, callback) {
-    ID = ID.replace(":",".");
-    adapter.log.debug("read in occ-events_" + ID + ".json");
-    adapter.readFile(adapter.namespace, 'occ-events_'+ID+'.json', function (err, data) {
-        if (err || !data) {
-            adapter.log.debug("Could not read occ-events_"+ID+".json");
-            callback(undefined);
-        } else {
-            callback(data);
-        }
-    });
-}
-
 function writeEvents2ioBroker(ID, event) {
     adapter.log.debug("writeEvents2ioBroker for " + ID);
     ID = ID.replace(":",".");
-    // TODO: REMOVE
-    //adapter.writeFile(adapter.namespace, 'occ-events_'+ID+'.json', event);
     createObjects(event);
 }
 
@@ -1251,10 +1040,11 @@ function putParamsets(address, params, paramType, ids) {
                         delete data[tempName];
                     } else {
                         if (tempObject == undefined) {
-                            adapter.log.error("tempObject is undefined");
+                            adapter.log.debug("tempObject is undefined");
+                        } else {
+                            data[tempName] = tempObject;
+                            data[timeName] = timeObject;
                         }
-                        data[tempName] = tempObject;
-                        data[timeName] = timeObject;
                     }
                 }
             }
@@ -1283,13 +1073,18 @@ function putParamsets(address, params, paramType, ids) {
                 data[dmin] = params[dmin];
                 data[dhour] = params[dhour];
             } else {
-                data[decalc_time] = params[decalc_time];
+                if (params[decalc_time] != undefined) {
+                    data[decalc_time] = params[decalc_time];
+                }
             }
 
+            // TODO: Remove Hardcoded Value
+            if (TYPE == "HM-CC-TC") {
+                data['MODE_TEMPERATUR_REGULATOR'] = 1; // Always set Mode = AUTO
+            }
             /* ################################## */
 
             adapter.sendTo(instance, "putParamset", {ID: ID, paramType: paramType, params: data}, function (doc) {
-//            adapter.sendTo(instance, "putParamset", {ID: ID, paramType: paramType, params: params}, function (doc) {
                 var err = doc.error;
                 var data = doc.result;
                 adapter.log.debug("data = " + JSON.stringify(data));
@@ -1317,152 +1112,374 @@ function parseScheduler(ID) {
         res = res.rows;
         for (var i = 0; i < res.length; i++) {
             var id = res[i].doc.common.name;
-            // TODO: remove
-            /*
-             if (id == "update") {
-             // do nothing
-             } else {
-             */
             var object = res[i].doc;
-            createJob(object);
-            //}
+
+            // if recurrence exists, remove all Jobs
+            var recurrencePattern = object.native.recurrencePattern;
+
+            adapter.log.info("Job Management - parseScheduler, Add");
+            jobManagement(object, recurrencePattern, true);
         }
     });
 }
 
-function createJob(object) {
-    var IDID = object.native.IDID;
-    var TYPE = object.native.TYPE;
+function addDays(date, days) {
+    var result = new Date(date);
+    result.setDate(date.getDate() + days);
+    return result;
+}
 
-    var start;
-    var end;
-    var begin;
-    var objectName;
-    var state;
-    var scheduleName;
-    var job;
-
-    start = object.native.start;
-    end = object.native.end;
-
-    begin = new Date(start);
-    end = new Date(end);
-
-    var allDay = object.native.allDay;
-    if (allDay == true) {
-        adapter.log.info("allDay Value for " + IDID);
+function untilStringToDate (date) {
+    var regex = /^(\d{4})(\d{2})(\d{2})(T(\d{2})(\d{2})(\d{2})Z)?$/;
+    var nDate = regex.exec(date);
+    if (!nDate) {
+        throw new Error("Invalid UNTIL value: " + date)
     }
+    return new Date(Date.UTC(nDate[1], nDate[2] - 1, nDate[3], nDate[5] || 0, nDate[6] || 0, nDate[7] || 0));
+}
 
-    objectName = IDID;
-    state = object.native.switcher;
+function getNextDayOfWeek(date, dayOfWeek) {
+    // Code to check that date and dayOfWeek are valid left as an exercise ;)
+    var resultDate = new Date(date.getTime());
+    resultDate.setDate(date.getDate() + (7 + dayOfWeek - date.getDay()) % 7);
+    return resultDate;
+}
 
-    scheduleName = objectName + "###" + begin.getTime() + "###" + state;
+function jobManagement(object, recurrencePattern, flag) {
+    // TODO: change Jobs from recurrencePattern
+    if (recurrencePattern) {
+        // FREQ=DAILY;INTERVAL=1;COUNT=2
+        adapter.log.info("RECURRENCEPATTERN = " + recurrencePattern);
 
-    job = new Object();
-    job.objectName = objectName;
-    job.scheduleName = scheduleName;
-    job.TYPE = TYPE;
+        var rec = recurrencePattern.split(";");
+        var frequence = rec[0].replace("FREQ=", "");
+        var interval = parseInt(rec[1].replace("INTERVAL=", ""));
+        var count;
+        var until;
+        var byDay;
+        var byMonthDay;
+        var byMonth;
+        var byYearDay;
 
-    job.state = state;
-    job.time = begin;
+        if (rec[2].indexOf("COUNT=") == 0) {
+            count = rec[2].replace("COUNT=", "");
+        } else if (rec[2].indexOf("UNTIL=") == 0) {
+            until = rec[2].replace("UNTIL=", "");
+        }
 
-    createScheduledJob(job);
+        if (frequence == "WEEKLY") {
+            byDay = rec[3].replace("BYDAY=", "");
+        }
 
-    // Create job for true and false
-    scheduleName = objectName + "###" + end.getTime() + "###" + !state;
+        if (frequence == "MONTHLY") {
+            if (until) {
+                byMonthDay = rec[4].replace("BYMONTHDAY=", "");
+            } else if (count) {
+                byMonthDay = rec[4].replace("BYDAY=", "");
+            }
+        }
 
-    job = new Object();
-    job.objectName = objectName;
-    job.scheduleName = scheduleName;
+        if (frequence == "YEARLY") {
+            byMonth = rec[5].replace("BYMONTH=", "");
+            if (rec[6].indexOf("BYYEARDAY=") == 0) {
+                byYearDay = rec[6].indexOf("BYYEARDAY=");
+            } else if (rec[6].indexOf("BYDAY=") == 0) {
+                byYearDay = rec[6].indexOf("BYDAY=");
+            }
+        }
 
-    job.TYPE = TYPE;
-    job.state = !state;
-    job.time = end;
-    createScheduledJob(job);
+        var originalObject = (JSON.parse(JSON.stringify(object)));
 
-    // Feature: add Support for recurring Events
-    var numberoftimes = object.native.numberoftimes; // 2
-    var repeaterCombo = object.native.repeaterCombo; // day
-    var jqdEnd = object.native.jqdEnd; // "07/02/2015"
-    var jende = new Date(jqdEnd);
-    if (jqdEnd != undefined && jqdEnd != "" && numberoftimes == 0) {
-        var m = end.getMinutes();
-        var h = end.getHours();
-        jende.setMinutes(m);
-        jende.setHours(h);
+        switch (frequence) {
+            case "DAILY" :
+                if (until && until.indexOf("9999") < 0) {
+                    var end = untilStringToDate(until);
+                    var begin = new Date(originalObject.native.from);
+                    end.setMinutes(begin.getMinutes());
+                    end.setHours(begin.getHours());
 
-        if (repeaterCombo == "day") {
-            numberoftimes = (jende - end) / 86400000;
-        } else if (repeaterCombo == "week") {
-            numberoftimes = (jende - end) / 86400000 / 7;
-        } else if (repeaterCombo == "month") {
-            numberoftimes = (jende.getMonth() - end.getMonth());
-        } else if (repeaterCombo == "year") {
-            numberoftimes = (jende.getYear() - end.getYear());
+                    var from = new Date(originalObject.native.from);
+                    var to = new Date(originalObject.native.to);
+
+                    if (originalObject.native.originalData.from &&
+                        originalObject.native.originalData.from != originalObject.native.from &&
+                        (typeof originalObject.native.originalData.from) == "string") {
+                        from = new Date(originalObject.native.originalData.from);
+                    }
+
+                    if (originalObject.native.originalData.to &&
+                        originalObject.native.originalData.to != originalObject.native.to &&
+                        (typeof originalObject.native.originalData.to) == "string") {
+                        to = new Date(originalObject.native.originalData.to);
+                    }
+
+                    while (end >= from) {
+                        jobManagement(originalObject, undefined, flag);
+
+                        from = addDays(from, interval);
+                        to = addDays(to, interval);
+
+                        originalObject.native.from = from;
+                        originalObject.native.to = to;
+                        originalObject.native.originalData.from = from;
+                        originalObject.native.originalData.to = to;
+
+                        from = new Date(originalObject.native.from);
+                        to = new Date(originalObject.native.to);
+                    }
+                } else {
+                    if (until && until.indexOf("9999") == 0) {
+                        count = 100;
+                    }
+                    var from = new Date(originalObject.native.from);
+                    var to = new Date(originalObject.native.to);
+
+                    if (originalObject.native.originalData.from &&
+                        originalObject.native.originalData.from != originalObject.native.from &&
+                        (typeof originalObject.native.originalData.from) == "string") {
+                        from = new Date(originalObject.native.originalData.from);
+                    }
+
+                    if (originalObject.native.originalData.to &&
+                        originalObject.native.originalData.to != originalObject.native.to &&
+                        (typeof originalObject.native.originalData.to) == "string") {
+                        to = new Date(originalObject.native.originalData.to);
+                    }
+                    for (var c = 0; c < count; c++) {
+                        jobManagement(originalObject, undefined, flag);
+
+                        from = addDays(from, interval);
+                        to = addDays(to, interval);
+
+                        originalObject.native.from = from;
+                        originalObject.native.to = to;
+                        originalObject.native.originalData.from = from;
+                        originalObject.native.originalData.to = to;
+
+                        from = new Date(originalObject.native.from);
+                        to = new Date(originalObject.native.to);
+                    }
+                }
+                object = originalObject;
+                return true;
+            case "WEEKLY":
+                // FREQ=WEEKLY;INTERVAL=1;UNTIL=99991230T230000Z;BYDAY=SU
+                if (until && until.indexOf("9999") < 0) {
+                    var end = untilStringToDate(until);
+                    var begin = new Date(originalObject.native.from);
+                    end.setMinutes(begin.getMinutes());
+                    end.setHours(begin.getHours());
+
+                    var from = new Date(originalObject.native.from);
+                    var to = new Date(originalObject.native.to);
+
+                    if (originalObject.native.originalData.from &&
+                        originalObject.native.originalData.from != originalObject.native.from &&
+                        (typeof originalObject.native.originalData.from) == "string") {
+                        from = new Date(originalObject.native.originalData.from);
+                    }
+
+                    if (originalObject.native.originalData.to &&
+                        originalObject.native.originalData.to != originalObject.native.to &&
+                        (typeof originalObject.native.originalData.to) == "string") {
+                        to = new Date(originalObject.native.originalData.to);
+                    }
+
+                    var day = from.getDay();
+                    var w = byDay.split(",");
+
+                    var f = new Date((JSON.parse(JSON.stringify(from))));
+                    var t = new Date((JSON.parse(JSON.stringify(to))));
+
+                    for (var i = 0; i < w.length; i++) {
+                        var wks = weekdays[w[i]];
+
+                        while (end >= from) {
+                            var first = getNextDayOfWeek(f, weekday);
+                            var second = getNextDayOfWeek(t, weekday);
+
+                            jobManagement(originalObject, undefined, flag);
+
+                            if (first == undefined && second == undefined) {
+                                var from = new Date(originalObject.native.from);
+                                var to = new Date(originalObject.native.to);
+
+                                if (originalObject.native.originalData.from &&
+                                    originalObject.native.originalData.from != originalObject.native.from &&
+                                    (typeof originalObject.native.originalData.from) == "string") {
+                                    from = new Date(originalObject.native.originalData.from);
+                                }
+
+                                if (originalObject.native.originalData.to &&
+                                    originalObject.native.originalData.to != originalObject.native.to &&
+                                    (typeof originalObject.native.originalData.to) == "string") {
+                                    to = new Date(originalObject.native.originalData.to);
+                                }
+                            } else {
+                                from = first;
+                                to = second;
+                            }
+                            originalObject.native.from = from;
+                            originalObject.native.to = to;
+                            originalObject.native.originalData.from = from;
+                            originalObject.native.originalData.to = to;
+
+                            jobManagement(originalObject, undefined, flag);
+
+                            // Only each Week on the same day as from was
+                            from = addDays(from, interval + 6);
+                            to = addDays(to, interval + 6);
+
+                            originalObject.native.from = from;
+                            originalObject.native.to = to;
+                            originalObject.native.originalData.from = from;
+                            originalObject.native.originalData.to = to;
+
+                            first = undefined;
+                            second = undefined;
+                        }
+                    }
+                } else {
+                    if (until && until.indexOf("9999") == 0) {
+                        count = 100;
+                    }
+
+                    for (var i = 0; i < w.length; i++) {
+                        var weekday = weekdays[w[i]];
+
+                        var first = getNextDayOfWeek(f, weekday);
+                        var second = getNextDayOfWeek(t, weekday);
+
+                        for (var c = 0; c < count; c++) {
+                            if (first == undefined && second == undefined) {
+                                var from = new Date(originalObject.native.from);
+                                var to = new Date(originalObject.native.to);
+
+                                if (originalObject.native.originalData.from &&
+                                    originalObject.native.originalData.from != originalObject.native.from &&
+                                    (typeof originalObject.native.originalData.from) == "string") {
+                                    from = new Date(originalObject.native.originalData.from);
+                                }
+
+                                if (originalObject.native.originalData.to &&
+                                    originalObject.native.originalData.to != originalObject.native.to &&
+                                    (typeof originalObject.native.originalData.to) == "string") {
+                                    to = new Date(originalObject.native.originalData.to);
+                                }
+                            } else {
+                                from = first;
+                                to = second;
+                            }
+                            originalObject.native.from = from;
+                            originalObject.native.to = to;
+                            originalObject.native.originalData.from = from;
+                            originalObject.native.originalData.to = to;
+
+                            jobManagement(originalObject, undefined, flag);
+
+                            // Only each Week on the same day as from was
+                            from = addDays(from, interval + 6);
+                            to = addDays(to, interval + 6);
+
+                            originalObject.native.from = from;
+                            originalObject.native.to = to;
+                            originalObject.native.originalData.from = from;
+                            originalObject.native.originalData.to = to;
+
+                            first = undefined;
+                            second = undefined;
+                        }
+                    }
+                }
+                object = originalObject;
+                return true;
+
+                return true;
+            case "MONTHLY":
+                return true;
+            case "YEARLY":
+                return true;
         }
     }
 
-    if (repeaterCombo != "none") {
-        // add createScheduledJob for every numberoftimes
-        for (var i = 1; i <= numberoftimes; i++) {
-            if (repeaterCombo == "day") {
-                begin.setDate(begin.getDate() + 1);
-                end.setDate(end.getDate() + 1);
-            } else if (repeaterCombo == "week") {
-                begin.setDate(begin.getDate() + 7);
-                end.setDate(end.getDate() + 7);
-            } else if (repeaterCombo == "month") {
-                var yx = begin.getYear() + 1900;
-                var mx = begin.getMonth() + 1;
-                var dx = begin.getDate();
-                var mmx = begin.getMinutes();
-                var hx = begin.getHours();
-                begin = new Date(yx, mx, dx, hx, mmx);
+    if (flag) {
+        // Create Jobs
+        var state = object.native.state;
 
-                var yx = end.getYear() + 1900;
-                var mx = end.getMonth() + 1;
-                var dx = end.getDate();
-                var mmx = end.getMinutes();
-                var hx = end.getHours();
-                end = new Date(yx, mx, dx, hx, mmx);
-            } else if (repeaterCombo == "year") {
-                var yx = begin.getYear() + 1900 + 1;
-                var mx = begin.getMonth();
-                var dx = begin.getDate();
-                var mmx = begin.getMinutes();
-                var hx = begin.getHours();
-                begin = new Date(yx, mx, dx, hx, mmx);
+        var objectName = object.native.objectID;
+        var begin = new Date(object.native.from);
+        var to = new Date(object.native.to);
+        var TYPE = types[object.native.type];
 
-                var yx = end.getYear() + 1900 + 1;
-                var mx = end.getMonth();
-                var dx = end.getDate();
-                var mmx = end.getMinutes();
-                var hx = end.getHours();
-                end = new Date(yx, mx, dx, hx, mmx);
-            }
-            scheduleName = objectName + "###" + begin.getTime() + "###" + state;
+        // var scheduleName = objectName + "###" + begin.getTime() + "###" + state;
+        var scheduleName = objectName + "###" + begin.getTime() + "###" + state;
 
+        var job = new Object();
+        job.objectName = objectName;
+        job.scheduleName = scheduleName;
+        job.TYPE = TYPE;
+
+        job.state = state;
+        job.time = begin;
+
+        createScheduledJob(job);
+
+        if (state == true || state == false) {
             job = new Object();
+            scheduleName = objectName + "###" + to.getTime() + "###" + !state;
+
             job.objectName = objectName;
             job.scheduleName = scheduleName;
-
             job.TYPE = TYPE;
-            job.state = state;
-            job.time = begin;
 
-            createScheduledJob(job);
-
-            // Create job for true and false
-            scheduleName = objectName + "###" + end.getTime() + "###" + !state;
-
-            job = new Object();
-            job.objectName = objectName;
-            job.scheduleName = scheduleName;
-
-            job.TYPE = TYPE;
             job.state = !state;
-            job.time = end;
+            job.time = to;
             createScheduledJob(job);
+        }
+    } else {
+        var allJobs = schedule['scheduledJobs'];
+
+        var state = object.native.state;
+
+        var objectName = object.native.objectID;
+        var begin = new Date(object.native.originalData.from);
+        var to = new Date(object.native.originalData.to);
+        var TYPE = types[object.native.type];
+
+        var scheduleName = objectName + "###" + begin.getTime() + "###" + state;
+
+        var job = new Object();
+        job.objectName = objectName;
+        job.scheduleName = scheduleName;
+        job.TYPE = TYPE;
+
+        job.state = state;
+        job.time = begin;
+
+        if (allJobs[scheduleName] != undefined) {
+            adapter.log.info("Cancel Job: " + scheduleName);
+            allJobs[scheduleName].cancel();
+        } else {
+            adapter.log.info("Job: " + scheduleName + " did not exist, do nothing");
+        }
+
+        if (state == true || state == false) {
+            job = new Object();
+            scheduleName = objectName + "###" + to.getTime() + "###" + !state;
+
+            job.objectName = objectName;
+            job.scheduleName = scheduleName;
+            job.TYPE = TYPE;
+
+            job.state = !state;
+            job.time = to;
+
+            if (allJobs[scheduleName] != undefined) {
+                adapter.log.info("Cancel Job: " + scheduleName);
+                allJobs[scheduleName].cancel();
+            } else {
+                adapter.log.info("Job: " + scheduleName + " did not exist, do nothing");
+            }
         }
     }
 }
@@ -1472,8 +1489,9 @@ function nextDay(d, dow){
     return d;
 }
 
-function parseDecalc(jsonEvent, ID, type, parent, member) {
+function parseDecalc(jsonEvent, ID, type, parent, member, name) {
     adapter.log.debug("parseDecalc for " + ID);
+    // var name = objects[member].common.name;
     var decalcDay = "";
     var decalcTime = "";
 
@@ -1548,61 +1566,99 @@ function parseDecalc(jsonEvent, ID, type, parent, member) {
     //for (var wk = 1; wk < 52; wk++) {
     for (var wk = 1; wk < 2; wk++) {
         // New Event
-        var event = new Object();
+        var event = new defaultEvent();
+        event.objectID = member;
+        event.resourceId = name;
 
-        event.IDID = member;
+        event.from = new Date(year, month, day, hours, minutes);
+        event.to = new Date(year, month, day, hours, minutes+30); // Only for reading
+        adapter.log.debug("from:" + event.from + ",to:" + event.to);
 
-        event.start = new Date(year, month, day, hours, minutes);
-        event.end = new Date(year, month, day, hours, minutes+30); // Only for reading
-        adapter.log.debug("start:" + event.start + ",end:" + event.end);
-
-        event.title = "DECALCIFICATION";
+        event.subject = "DECALCIFICATION";
 
         var colorName = adapter.namespace + "." + member + ".color";
         if (colorName != undefined && states[colorName] != undefined) {
-            event.color = states[colorName].val;
+            event.background = states[colorName].val;
+            event.color = "black";
         } else {
-            event.color = colors[colorPicker];
+            event.background = colors[colorPicker];
+            event.color = "black";
         }
-        adapter.log.debug("ID: " + ID + " color: " + event.color);
+        adapter.log.debug("ID: " + ID + " color: " + event.background);
 
-        event.allDay = false;
-        event.id = event.title + "_" + ID.replace(parent+".","");
-        event.decalc = "true";
+        event.oldID = event.subject + "_" + ID.replace(parent+".","");
+
+        var rid = event.subject + ID.replace(parent+".","");
+        rid = rid.replace(":","");
+        event.id = rid;
+
+        event.type = types.decalc;
 
         // Create recurring Event
         if (wk == 1) {
-            dateStart = event.start;
-            editable = true;
-            event.tooltip = "This is a recurring Event.";
-        } else {
+            dateStart = event.from;
             editable = false;
-            event.title = event.title + " (Repeated Event)";
+        } else {
+            editable = true;
+            event.subject = event.title + " (Repeated Event)";
             event.tooltip = "This is a recurring Event.\n\nThe original Event can be found at\n" + dateStart;
         }
 
-        event.editable = editable;
-        event.startEditable = editable;
-        event.durationEditable = editable;
+        event.description = "";
+        event.res = "Room 5";
+        event.location = "";
 
         allEvents[ID].push(event);
-        adapter.log.debug("NEW START = " + event.start + " NEW END = " + event.end);
+        adapter.log.debug("NEW FROM = " + event.from + " NEW TO = " + event.to);
     }
 }
 
-function parseEvents(jsonEvent, ID, type, parent, member) {
+function defaultEvent(event) {
+    this.allDay =               event == undefined ? undefined : event.allDay;
+    this.background =           event == undefined ? undefined : event.background;
+    this.borderColor =          event == undefined ? undefined : event.borderColor;
+    this.color =                event == undefined ? undefined : event.color;
+    this.description =          event == undefined ? undefined : event.description;
+    this.draggable =            event == undefined ? undefined : event.draggable;
+    this.from =                 event == undefined ? undefined : event.from;
+    this.hidden =               event == undefined ? undefined : event.hidden;
+    this.id =                   event == undefined ? undefined : event.id;
+    this.location =             event == undefined ? undefined : event.location;
+    this.recurrencePattern =    event == undefined ? undefined : event.recurrencePattern;
+    this.FREQ =                 event == undefined ? undefined : event.FREQ;
+    this.COUNT =                event == undefined ? undefined : event.COUNT;
+    this.UNTIL =                event == undefined ? undefined : event.UNTIL;
+    this.BYDAY =                event == undefined ? undefined : event.BYDAY;
+    this.BYMONTHDAY =           event == undefined ? undefined : event.BYMONTHDAY;
+    this.BYMONTH =              event == undefined ? undefined : event.BYMONTH;
+    this.INTERVAL =             event == undefined ? undefined : event.INTERVAL;
+    this.recurrenceExption =    event == undefined ? undefined : event.recurrenceExption;
+    this.resizeable =           event == undefined ? undefined : event.resizeable;
+    this.resourceId =           event == undefined ? undefined : event.resourceId;
+    this.readOnly =             event == undefined ? undefined : event.readOnly;
+    this.subject =              event == undefined ? undefined : event.subject;
+    this.style =                event == undefined ? undefined : event.style;
+    this.status =               event == undefined ? undefined : event.status;
+    this.to =                   event == undefined ? undefined : event.to;
+    this.tooltip =              event == undefined ? undefined : event.tooltip;
+    this.timeZone =             event == undefined ? undefined : event.timeZone;
+
+    this.type =                 event == undefined ? undefined : event.type;
+    this.state =                event == undefined ? undefined : event.state;
+    this.objectID =             event == undefined ? undefined : event.objectID;
+    this.oldID =                event == undefined ? undefined : event.oldID;
+};
+
+function parseEvents(jsonEvent, ID, type, parent, member, name) {
     var event;
 
     var timeoutName = "";
     var temperatureName = "";
 
-
     var thermostat = thermostatArray[type];
     if (thermostat != undefined) {
-        //temperatureName = thermostat.temperature;
         temperatureName = thermostat.timeoutText;
         if (temperatureName == undefined) {
-            //temperatureName = thermostatArray.temperature;
             temperatureName = thermostatArray.timeoutText;
         }
         temperatureName = temperatureName[0] + "_";
@@ -1659,53 +1715,61 @@ function parseEvents(jsonEvent, ID, type, parent, member) {
                         minutes = timeout % 60;
 
                         // New Event
-                        event = new Object();
+                        event = new defaultEvent();
+                        event.type = types.homematic;
 
-                        event.IDID = member;
+                        event.objectID = member;
+                        event.resourceId = name;
 
-                        // CHECK if start begins at midnight
+                        // CHECK if from begins at midnight
                         var temperature;
 
                         if (parseInt(minutes) + parseInt(hours) > 0 && i == 1) {
-                            event.start = new Date(year, month, day - n + parseInt(weekday), 0, 0);
-                            event.end = new Date(year, month, day - n + parseInt(weekday), hours, minutes);
-                            adapter.log.debug("start:"+event.start+", end:"+event.end);
-                            if (event.end == undefined) {
-                                adapter.log.error("event.end is undefined");
+                            event.from = new Date(year, month, day - n + parseInt(weekday), 0, 0);
+                            event.to = new Date(year, month, day - n + parseInt(weekday), hours, minutes);
+                            adapter.log.debug("from:"+event.from+", to:"+event.to);
+                            if (event.to == undefined) {
+                                adapter.log.error("event.to is undefined");
                             }
                             var x = parseInt(i) - 1;
 
                             tempn = temperatureName + weekDays[weekday] + "_" + x;
                             temperature = jsonData[tempName];
-                            event.title = tempName;
+                            event.subject = tempName;
+                            event.description = "";
+                            event.res = "Room 5";
+                            event.location = "";
 
                             var colorName = adapter.namespace + "." + member + ".color";
                             if (colorName != undefined && states[colorName] != undefined) {
-                                event.color = states[colorName].val;
+                                event.background = states[colorName].val;
+                                event.color = "black";
                             } else {
-                                event.color = colors[colorPicker];
+                                event.background = colors[colorPicker];
+                                event.color = "black";
                             }
-                            adapter.log.debug("ID: " + ID + " color: " + event.color);
+                            adapter.log.debug("ID: " + ID + " color: " + event.background);
 
-                            event.allDay = false;
-                            event.id = event.title + "_" + ID;
-                            event.temperature = temperature;
-                            event.repeater = "true";
+                            event.oldID = event.subject + "_" + ID;
+
+                            //event.id = (event.oldID).replace("_","").replace(":","").replace(".");
+                            var rid = event.subject + ID;
+                            rid = rid.replace(":","");
+                            event.id = rid;
+
+                            event.state = temperature;
 
                             // Create recurring Event
                             if (wk == 1) {
-                                dateStart = event.start;
-                                editable = true;
-                                event.tooltip = "This is a recurring Event.";
-                            } else {
+                                dateStart = event.from;
                                 editable = false;
-                                event.title = event.title + " (Repeated Event)";
+                            } else {
+                                editable = true;
+                                event.subject = event.subject + " (Repeated Event)";
                                 event.tooltip = "This is a recurring Event.\n\nThe original Event can be found at\n" + dateStart;
                             }
 
-                            event.editable = editable;
-                            event.startEditable = editable;
-                            event.durationEditable = editable;
+                            // event.readOnly = editable;
                             // Create recurring Event
 
                             if (allEvents[parent + "." + ID] == undefined) {
@@ -1713,11 +1777,14 @@ function parseEvents(jsonEvent, ID, type, parent, member) {
                             }
                             allEvents[parent + "." + ID].push(event);
 
-                            adapter.log.debug("NEW START = " + event.start + " NEW END = " + event.end);
+                            adapter.log.debug("NEW FROM = " + event.from + " NEW TO = " + event.to);
                         }
 
-                        event = new Object();
-                        event.start = new Date(year, month, day - n + parseInt(weekday), hours, minutes);
+                        event = new defaultEvent();
+                        event.type = types.homematic;
+                        event.from = new Date(year, month, day - n + parseInt(weekday), hours, minutes);
+                        event.objectID = member;
+                        event.resourceId = name;
 
                         var x = parseInt(i) + 1;
                         var dummy = timeoutName + weekDays[weekday] + "_" + x;
@@ -1727,10 +1794,10 @@ function parseEvents(jsonEvent, ID, type, parent, member) {
                         hours = Math.floor(timeend / 60);
                         minutes = timeend % 60;
 
-                        event.end = new Date(year, month, day - n + parseInt(weekday), hours, minutes);
-                        adapter.log.debug("start:"+event.start+",end:"+event.end);
-                        if (event.end == undefined) {
-                            adapter.log.error("event.end is undefined");
+                        event.to = new Date(year, month, day - n + parseInt(weekday), hours, minutes);
+                        adapter.log.debug("from:"+event.from+",to:"+event.to);
+                        if (event.to == undefined) {
+                            adapter.log.error("event.to is undefined");
                         }
 
                         x = parseInt(i) + 1;
@@ -1738,42 +1805,46 @@ function parseEvents(jsonEvent, ID, type, parent, member) {
                             x = 2;
                         tempn = temperatureName + weekDays[weekday] + "_" + x;
                         temperature = jsonData[tempn]
-                        event.title = tempn;
+                        event.subject = tempn;
+                        event.description = "";
+                        event.res = "Room 5";
+                        event.location = "";
 
                         var colorName = adapter.namespace + "." + member + ".color";
                         if (colorName != undefined && states[colorName] != undefined) {
-                            event.color = states[colorName].val;
+                            event.background = states[colorName].val;
+                            event.color = "black";
                         } else {
-                            event.color = colors[colorPicker];
+                            event.background = colors[colorPicker];
+                            event.color = "black";
                         }
-                        adapter.log.debug("ID: " + ID + " color: " + event.color);
+                        adapter.log.debug("ID: " + ID + " color: " + event.background);
 
-                        event.allDay = false;
-                        event.id = event.title + "_" + ID;
-                        event.temperature = temperature;
-                        event.repeater = "true";
+                        event.oldID = event.subject + "_" + ID;
 
-                        event.IDID = member;
+                        // event.id = (event.oldID).replace("_","").replace(":","").replace(".");
+                        var rid = event.subject + ID;
+                        rid = rid.replace(":","");
+                        event.id = rid;
+
+                        event.state = temperature;
 
                         // Create recurring Event
                         if (wk == 1) {
-                            dateStart = event.start;
-                            editable = true;
-                            event.tooltip = "This is a recurring Event.";
-                        } else {
+                            dateStart = event.from;
                             editable = false;
-                            event.title = event.title + " (Repeated Event)";
+                        } else {
+                            editable = true;
+                            event.subject = event.title + " (Repeated Event)";
                             event.tooltip = "This is a recurring Event.\n\nThe original Event can be found at\n" + dateStart;
                         }
 
-                        event.editable = editable;
-                        event.startEditable = editable;
-                        event.durationEditable = editable;
+                        // event.readOnly = editable;
                         // Create recurring Event
 
                         allEvents[parent + "." + ID].push(event);
 
-                        adapter.log.debug("START = " + event.start + " END = " + event.end);
+                        adapter.log.debug("FROM = " + event.from + " TO = " + event.to);
                     }
                 }
                 today.setTime(today.getTime() + 7 * (24*60*60*1000));

@@ -1,5 +1,4 @@
-www/fullcalendar.*
 .idea
-tester.js
-www/_socket
+www/js/_socket
+www/js/jqwidgets
 node_modules
